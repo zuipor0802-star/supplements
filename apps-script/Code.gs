@@ -4,6 +4,11 @@
 
 const SHEET_ITEMS = "Supplements";
 const SHEET_META = "AppMeta";
+const SHEET_CHECKINS = "Checkins";
+const CHECKIN_HEADERS = ["日期", "品項ID", "品名", "時間", "顆數"];
+// 舊版把打卡紀錄整包 JSON 存在 AppMeta 的一格（有 50,000 字元上限），搬移後改名保留為備份
+const META_KEY_LEGACY_CHECKINS = "checkins";
+const META_KEY_LEGACY_BACKUP = "checkins_legacy_backup";
 
 function doGet(e) {
   return handleRequest(e);
@@ -103,14 +108,16 @@ function loadAllData() {
     });
   }
 
-  // 讀取打卡與提醒紀錄 (若有)
-  let checkins = {};
+  // 讀取打卡紀錄 (Checkins 工作表，一次打卡一列)
+  let checkins = loadCheckinRows();
+
+  // 讀取提醒時間；Checkins 工作表還沒資料時，沿用舊版 AppMeta 的打卡 JSON
   let reminders = {};
   const metaSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_META);
   if (metaSheet) {
     const metaRows = metaSheet.getDataRange().getValues();
     for (let i = 0; i < metaRows.length; i++) {
-      if (metaRows[i][0] === "checkins" && metaRows[i][1]) {
+      if (metaRows[i][0] === META_KEY_LEGACY_CHECKINS && metaRows[i][1] && checkins === null) {
         try { checkins = JSON.parse(metaRows[i][1]); } catch(e){}
       }
       if (metaRows[i][0] === "reminders" && metaRows[i][1]) {
@@ -118,6 +125,7 @@ function loadAllData() {
       }
     }
   }
+  if (!checkins) checkins = {};
 
   return {
     status: "success",
@@ -160,15 +168,96 @@ function saveAllData(data) {
     sheet.getRange(2, 1, rows.length, 11).setValues(rows);
   }
 
-  // 備份打卡紀錄與提醒時間
+  if (data.checkins) {
+    saveCheckinRows(data.checkins, items);
+  }
+
+  // 提醒時間；舊版打卡 JSON 在打卡列寫入後改名為備份，之後不再更新
   const metaSheet = getOrCreateSheet(SHEET_META, ["Key", "JSON"]);
+  const metaRows = metaSheet.getDataRange().getValues();
+  let legacyCheckins = null;
+  let legacyBackup = null;
+  for (let i = 0; i < metaRows.length; i++) {
+    if (metaRows[i][0] === META_KEY_LEGACY_CHECKINS) legacyCheckins = metaRows[i][1];
+    if (metaRows[i][0] === META_KEY_LEGACY_BACKUP) legacyBackup = metaRows[i][1];
+  }
+  if (data.checkins) {
+    if (!legacyBackup) legacyBackup = legacyCheckins;
+    legacyCheckins = null;
+  }
+
   metaSheet.clearContents();
   metaSheet.appendRow(["Key", "JSON"]);
-  if (data.checkins) {
-    metaSheet.appendRow(["checkins", JSON.stringify(data.checkins)]);
-  }
   if (data.reminders) {
     metaSheet.appendRow(["reminders", JSON.stringify(data.reminders)]);
+  }
+  if (legacyCheckins) {
+    metaSheet.appendRow([META_KEY_LEGACY_CHECKINS, legacyCheckins]);
+  }
+  if (legacyBackup) {
+    metaSheet.appendRow([META_KEY_LEGACY_BACKUP, legacyBackup]);
+  }
+}
+
+// 讀取 Checkins 工作表 → { "yyyy-MM-dd": { 品項ID: { time, daily } } }；工作表不存在或沒有資料時回傳 null
+function loadCheckinRows() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_CHECKINS);
+  if (!sheet || sheet.getLastRow() < 2) return null;
+
+  const tz = ss.getSpreadsheetTimeZone();
+  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, CHECKIN_HEADERS.length).getValues();
+  const checkins = {};
+
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    if (r[0] === "" || r[1] === "") continue;
+
+    // 防止試算表把日期、時間字串自動轉成日期物件
+    const date = (r[0] instanceof Date) ? Utilities.formatDate(r[0], tz, "yyyy-MM-dd") : String(r[0]);
+    const time = (r[3] instanceof Date) ? Utilities.formatDate(r[3], tz, "HH:mm") : String(r[3]);
+    const itemId = String(r[1]);
+
+    if (!checkins[date]) checkins[date] = {};
+    checkins[date][itemId] = {
+      time: time,
+      daily: r[4] === "" ? 1 : Number(r[4])
+    };
+  }
+  return checkins;
+}
+
+// 以 { 日期: { 品項ID: { time, daily } } } 整份覆寫 Checkins 工作表
+function saveCheckinRows(checkins, items) {
+  const sheet = getOrCreateSheet(SHEET_CHECKINS, CHECKIN_HEADERS);
+  const nameById = {};
+  items.forEach(item => { nameById[String(item.id)] = item.name || ""; });
+
+  const rows = [];
+  Object.keys(checkins).sort().forEach(date => {
+    const day = checkins[date] || {};
+    Object.keys(day).forEach(itemId => {
+      const rec = day[itemId] || {};
+      rows.push([
+        date,
+        itemId,
+        nameById[itemId] || "",
+        rec.time || "",
+        rec.daily === undefined ? 1 : Number(rec.daily)
+      ]);
+    });
+  });
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow > 1) {
+    sheet.getRange(2, 1, lastRow - 1, CHECKIN_HEADERS.length).clearContent();
+  }
+  if (rows.length > 0) {
+    const range = sheet.getRange(2, 1, rows.length, CHECKIN_HEADERS.length);
+    // 日期、品項ID、時間設為純文字，避免被自動轉成日期或數字
+    range.setNumberFormat("@");
+    sheet.getRange(2, 5, rows.length, 1).setNumberFormat("0");
+    range.setValues(rows);
   }
 }
 
