@@ -517,6 +517,8 @@
     const STORAGE_KEY_CHECKINS = 'supplement_tracker_checkins_v8';
     const STORAGE_KEY_REMINDERS = 'supplement_tracker_reminders_v8';
     const STORAGE_KEY_CLOUD_URL = 'supplement_tracker_cloud_url';
+    // 本裝置已成功從哪個雲端網址拉取過資料；拉取成功前不上傳，避免預設資料覆蓋雲端
+    const STORAGE_KEY_CLOUD_VERIFIED = 'supplement_tracker_cloud_verified_url';
 
     let items = [];
     let currentFilter = 'all';
@@ -537,6 +539,10 @@
     function initData() {
       // 讀取 Google Apps Script 網址
       cloudApiUrl = localStorage.getItem(STORAGE_KEY_CLOUD_URL) || "";
+      // 舊版已連線的裝置：視為已驗證，維持原本的同步行為
+      if (cloudApiUrl && !localStorage.getItem(STORAGE_KEY_CLOUD_VERIFIED)) {
+        localStorage.setItem(STORAGE_KEY_CLOUD_VERIFIED, cloudApiUrl);
+      }
       updateCloudStatusUI();
 
       // 先從本地快取讀取
@@ -598,9 +604,17 @@
       }, 1200);
     }
 
+    function isCloudVerified() {
+      return !!cloudApiUrl && localStorage.getItem(STORAGE_KEY_CLOUD_VERIFIED) === cloudApiUrl;
+    }
+
     // 向 Google 試算表推播儲存
     async function pushToCloud() {
       if (!cloudApiUrl) return;
+      if (!isCloudVerified()) {
+        updateCloudIndicator('offline', '尚未讀取雲端，暫不上傳');
+        return;
+      }
       setSyncLoading(true);
       try {
         const payload = {
@@ -628,7 +642,7 @@
       }
     }
 
-    // 從 Google 試算表拉取資料
+    // 從 Google 試算表拉取資料，回傳 'hasData' | 'empty' | 'error'
     async function syncWithCloud(isSilent = false) {
       if (!cloudApiUrl) {
         if (!isSilent) toggleCloudModal();
@@ -642,7 +656,11 @@
         const result = await res.json();
 
         if (result.status === "success" && result.data) {
-          if (Array.isArray(result.data.items) && result.data.items.length > 0) {
+          const cloudHasItems = Array.isArray(result.data.items) && result.data.items.length > 0;
+          const cloudHasCheckins = !!result.data.checkins &&
+            Object.values(result.data.checkins).some(day => day && Object.keys(day).length > 0);
+
+          if (cloudHasItems) {
             items = result.data.items;
             saveDataLocal();
           }
@@ -656,14 +674,17 @@
           }
 
           updateCloudIndicator('online', '已同步 Google 試算表');
+          localStorage.setItem(STORAGE_KEY_CLOUD_VERIFIED, cloudApiUrl);
           if (!isSilent) showToast('已成功從 Google 試算表拉取最新數據！');
           renderAll();
+          return (cloudHasItems || cloudHasCheckins) ? 'hasData' : 'empty';
         } else {
           throw new Error(result.message || '未知錯誤');
         }
       } catch (err) {
         updateCloudIndicator('offline', '讀取失敗 (使用本機暫存)');
         if (!isSilent) showToast('同步失敗，目前顯示本機暫存資料', true);
+        return 'error';
       } finally {
         setSyncLoading(false);
       }
@@ -711,7 +732,7 @@
       }
     }
 
-    function saveAndConnectCloud() {
+    async function saveAndConnectCloud() {
       const url = document.getElementById('cloud-api-url').value.trim();
       if (!url) {
         showToast('請輸入有效的 Google Apps Script 網址', true);
@@ -721,16 +742,19 @@
       localStorage.setItem(STORAGE_KEY_CLOUD_URL, cloudApiUrl);
       updateCloudStatusUI();
       toggleCloudModal();
-      showToast('雲端 API 設定已儲存，正在雙向同步...');
-      // 首次設定：若雲端是空的，先推現有資料上去；然後嘗試拉取
-      pushToCloud().then(() => {
-        syncWithCloud();
-      });
+      showToast('雲端 API 設定已儲存，正在讀取雲端資料...');
+      // 先拉後推：雲端已有資料就以雲端為準；只有雲端是空的才上傳本機資料
+      const result = await syncWithCloud();
+      if (result === 'empty') {
+        await pushToCloud();
+        showToast('雲端尚無資料，已上傳本機資料');
+      }
     }
 
     function clearCloudApi() {
       cloudApiUrl = "";
       localStorage.removeItem(STORAGE_KEY_CLOUD_URL);
+      localStorage.removeItem(STORAGE_KEY_CLOUD_VERIFIED);
       updateCloudStatusUI();
       toggleCloudModal();
       showToast('已取消雲端同步，目前採用純本機模式');
