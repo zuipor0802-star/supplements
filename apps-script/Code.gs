@@ -9,6 +9,8 @@ const CHECKIN_HEADERS = ["日期", "品項ID", "品名", "時間", "顆數"];
 // 舊版把打卡紀錄整包 JSON 存在 AppMeta 的一格（有 50,000 字元上限），搬移後改名保留為備份
 const META_KEY_LEGACY_CHECKINS = "checkins";
 const META_KEY_LEGACY_BACKUP = "checkins_legacy_backup";
+// 資料版本號：每次儲存 +1；前端上傳時附上所依據的版本，不一致代表其他裝置已更新過
+const META_KEY_REVISION = "revision";
 
 function doGet(e) {
   return handleRequest(e);
@@ -20,7 +22,9 @@ function doPost(e) {
 
 function handleRequest(e) {
   const lock = LockService.getScriptLock();
-  lock.tryLock(15000);
+  if (!lock.tryLock(15000)) {
+    return jsonpResponse(e, { status: "error", message: "伺服器忙碌中，請稍後再試" });
+  }
 
   try {
     let action = (e && e.parameter && e.parameter.action) ? e.parameter.action : "getData";
@@ -55,8 +59,15 @@ function handleRequest(e) {
       if (!dataToSave) {
         return jsonpResponse(e, { status: "error", message: "無有效內容" });
       }
-      saveAllData(dataToSave);
-      return jsonpResponse(e, { status: "success", timestamp: new Date().toISOString() });
+      // 舊版前端不會送 baseRevision，照舊接受；新版前端的版本不一致就拒絕，避免覆蓋其他裝置的修改
+      const currentRevision = loadRevision();
+      if (payload && Object.prototype.hasOwnProperty.call(payload, "baseRevision") &&
+          payload.baseRevision !== currentRevision) {
+        return jsonpResponse(e, { status: "conflict", revision: currentRevision, message: "雲端資料已被其他裝置更新" });
+      }
+      const newRevision = currentRevision + 1;
+      saveAllData(dataToSave, newRevision);
+      return jsonpResponse(e, { status: "success", revision: newRevision, timestamp: new Date().toISOString() });
     }
 
     return jsonpResponse(e, { status: "error", message: "未知指令: " + action });
@@ -132,13 +143,24 @@ function loadAllData() {
     data: {
       items: items,
       checkins: checkins,
-      reminders: reminders
+      reminders: reminders,
+      revision: loadRevision()
     }
   };
 }
 
 // 儲存所有資料
-function saveAllData(data) {
+function loadRevision() {
+  const metaSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_META);
+  if (!metaSheet) return 0;
+  const metaRows = metaSheet.getDataRange().getValues();
+  for (let i = 0; i < metaRows.length; i++) {
+    if (metaRows[i][0] === META_KEY_REVISION) return Number(metaRows[i][1]) || 0;
+  }
+  return 0;
+}
+
+function saveAllData(data, revision) {
   const items = data.items || [];
   const sheet = getOrCreateSheet(SHEET_ITEMS, [
     "ID", "品名", "單罐規格", "未拆罐數", "散裝顆數", "預計採購罐數", "每日用量", "服用時段", "小備註", "購買連結", "最後更新"
@@ -188,6 +210,7 @@ function saveAllData(data) {
 
   // 先一次寫入新內容，再清掉多出來的舊列；中途出錯也不會先把備份清空
   const metaOut = [["Key", "JSON"]];
+  metaOut.push([META_KEY_REVISION, revision]);
   if (data.reminders) {
     metaOut.push(["reminders", JSON.stringify(data.reminders)]);
   }

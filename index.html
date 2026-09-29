@@ -91,7 +91,7 @@
           <span id="cloud-status-text" class="text-slate-600">未設定雲端</span>
         </button>
 
-        <button onclick="syncWithCloud()" id="btn-manual-sync" class="p-2 text-slate-600 hover:text-emerald-600 hover:bg-slate-100 rounded-xl transition" title="立即從 Google 試算表同步">
+        <button onclick="refreshFromCloud(false)" id="btn-manual-sync" class="p-2 text-slate-600 hover:text-emerald-600 hover:bg-slate-100 rounded-xl transition" title="立即從 Google 試算表同步">
           <i class="fa-solid fa-arrows-rotate text-xs" id="sync-icon"></i>
         </button>
 
@@ -519,6 +519,10 @@
     const STORAGE_KEY_CLOUD_URL = 'supplement_tracker_cloud_url';
     // 本裝置已成功從哪個雲端網址拉取過資料；拉取成功前不上傳，避免預設資料覆蓋雲端
     const STORAGE_KEY_CLOUD_VERIFIED = 'supplement_tracker_cloud_verified_url';
+    // 本機資料是基於雲端第幾版；上傳時附上，雲端已被其他裝置更新就會被拒絕，避免互相覆蓋
+    const STORAGE_KEY_CLOUD_REVISION = 'supplement_tracker_cloud_revision';
+    // 本機有尚未成功上傳的修改
+    const STORAGE_KEY_CLOUD_DIRTY = 'supplement_tracker_cloud_dirty';
 
     let items = [];
     let currentFilter = 'all';
@@ -527,6 +531,10 @@
     let cloudApiUrl = "";
     let isSyncing = false;
     let syncDebounceTimer = null;
+    let localChangeSeq = 0;      // 每次本機修改 +1，用來判斷同步期間有沒有新修改
+    let pushInFlight = false;
+    let pushQueued = false;
+    let lastRefreshAt = 0;
 
     function getTodayKey() {
       const d = new Date();
@@ -577,12 +585,19 @@
         checkinRecords[today] = {};
       }
 
-      // 如果有設定雲端 API，背景自動拉取最新資料
+      // 如果有設定雲端 API：有未上傳的修改就先上傳，否則背景拉取最新資料
       if (cloudApiUrl) {
-        syncWithCloud(true);
+        refreshFromCloud();
       }
     }
     initData();
+
+    // 從背景切回 App 時檢查雲端是否有其他裝置的更新
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && Date.now() - lastRefreshAt > 30000) {
+        refreshFromCloud();
+      }
+    });
 
     function saveDataLocal() {
       localStorage.setItem(STORAGE_KEY_ITEMS, JSON.stringify(items));
@@ -592,11 +607,47 @@
       localStorage.setItem(STORAGE_KEY_CHECKINS, JSON.stringify(checkinRecords));
     }
 
+    function getCloudRevision() {
+      const v = localStorage.getItem(STORAGE_KEY_CLOUD_REVISION);
+      return v === null ? null : Number(v);
+    }
+
+    function setCloudRevision(rev) {
+      if (typeof rev === 'number' && !isNaN(rev)) {
+        localStorage.setItem(STORAGE_KEY_CLOUD_REVISION, String(rev));
+      }
+    }
+
+    function isCloudDirty() {
+      return localStorage.getItem(STORAGE_KEY_CLOUD_DIRTY) === '1';
+    }
+
+    function setCloudDirty(dirty) {
+      if (dirty) localStorage.setItem(STORAGE_KEY_CLOUD_DIRTY, '1');
+      else localStorage.removeItem(STORAGE_KEY_CLOUD_DIRTY);
+    }
+
+    // 有未上傳的修改就上傳（衝突時會自動改為載入雲端），否則拉取最新資料
+    function refreshFromCloud(isSilent = true) {
+      if (!cloudApiUrl) {
+        if (!isSilent) toggleCloudModal();
+        return;
+      }
+      if (pushInFlight) return;
+      lastRefreshAt = Date.now();
+      if (isCloudDirty() && isCloudVerified()) {
+        return pushToCloud();
+      }
+      return syncWithCloud(isSilent);
+    }
+
     // 防抖自動同步至雲端
     function triggerCloudSync() {
       saveDataLocal();
       saveCheckinsLocal();
+      localChangeSeq++;
       if (!cloudApiUrl) return;
+      setCloudDirty(true);
 
       clearTimeout(syncDebounceTimer);
       syncDebounceTimer = setTimeout(() => {
@@ -608,17 +659,25 @@
       return !!cloudApiUrl && localStorage.getItem(STORAGE_KEY_CLOUD_VERIFIED) === cloudApiUrl;
     }
 
-    // 向 Google 試算表推播儲存
+    // 向 Google 試算表推播儲存；附上本機所依據的雲端版本號，雲端較新時會被拒絕
     async function pushToCloud() {
       if (!cloudApiUrl) return;
       if (!isCloudVerified()) {
         updateCloudIndicator('offline', '尚未讀取雲端，暫不上傳');
         return;
       }
+      // 同一台裝置的上傳一次只送一筆，避免自己跟自己的版本號衝突
+      if (pushInFlight) {
+        pushQueued = true;
+        return;
+      }
+      pushInFlight = true;
+      const seqAtSend = localChangeSeq;
       setSyncLoading(true);
       try {
         const payload = {
           action: "saveAll",
+          baseRevision: getCloudRevision(),
           data: {
             items: items,
             checkins: checkinRecords,
@@ -626,36 +685,61 @@
           }
         };
 
-        // 使用 text/plain 避免 CORS preflight OPTIONS 請求阻擋
+        // 使用 text/plain 避免 CORS preflight OPTIONS 請求
         const res = await fetch(cloudApiUrl, {
           method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'text/plain' },
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify(payload)
         });
+        const result = await res.json();
 
-        updateCloudIndicator('online', '雲端已同步');
+        if (result.status === 'success') {
+          setCloudRevision(result.revision);
+          if (seqAtSend === localChangeSeq) setCloudDirty(false);
+          updateCloudIndicator('online', '雲端已同步');
+        } else if (result.status === 'conflict') {
+          // 其他裝置已更新雲端：以雲端為準，剛才的修改捨棄並提示
+          setCloudDirty(false);
+          pushQueued = false;
+          await syncWithCloud(true, true);
+          showToast('其他裝置剛更新過資料，已載入最新版本，剛才的操作請再做一次', true);
+        } else {
+          throw new Error(result.message || '未知錯誤');
+        }
       } catch (err) {
-        updateCloudIndicator('offline', '離線暫存中');
+        updateCloudIndicator('offline', '上傳失敗，修改暫存在本機');
       } finally {
+        pushInFlight = false;
         setSyncLoading(false);
+        if (pushQueued) {
+          pushQueued = false;
+          pushToCloud();
+        }
       }
     }
 
     // 從 Google 試算表拉取資料，回傳 'hasData' | 'empty' | 'error'
-    async function syncWithCloud(isSilent = false) {
+    // force：衝突時強制以雲端為準；否則拉取期間本機有新修改就不覆蓋，改由上傳處理
+    async function syncWithCloud(isSilent = false, force = false) {
       if (!cloudApiUrl) {
         if (!isSilent) toggleCloudModal();
         return;
       }
 
       setSyncLoading(true);
+      const seqAtStart = localChangeSeq;
       try {
         const fetchUrl = `${cloudApiUrl}?action=getData&_t=${Date.now()}`;
         const res = await fetch(fetchUrl);
         const result = await res.json();
 
+        if (result.status === "success" && result.data && !force && localChangeSeq !== seqAtStart) {
+          // 拉取期間使用者又改了資料：保留本機修改，交給上傳（雲端較新會被拒絕並提示）
+          return 'error';
+        }
+
         if (result.status === "success" && result.data) {
+          setCloudRevision(result.data.revision);
           const cloudHasItems = Array.isArray(result.data.items) && result.data.items.length > 0;
           const cloudHasCheckins = !!result.data.checkins &&
             Object.values(result.data.checkins).some(day => day && Object.keys(day).length > 0);
@@ -677,7 +761,11 @@
           localStorage.setItem(STORAGE_KEY_CLOUD_VERIFIED, cloudApiUrl);
           if (!isSilent) showToast('已成功從 Google 試算表拉取最新數據！');
           renderAll();
-          return (cloudHasItems || cloudHasCheckins) ? 'hasData' : 'empty';
+          if (cloudHasItems || cloudHasCheckins) {
+            setCloudDirty(false);
+            return 'hasData';
+          }
+          return 'empty';
         } else {
           throw new Error(result.message || '未知錯誤');
         }
@@ -755,6 +843,8 @@
       cloudApiUrl = "";
       localStorage.removeItem(STORAGE_KEY_CLOUD_URL);
       localStorage.removeItem(STORAGE_KEY_CLOUD_VERIFIED);
+      localStorage.removeItem(STORAGE_KEY_CLOUD_REVISION);
+      setCloudDirty(false);
       updateCloudStatusUI();
       toggleCloudModal();
       showToast('已取消雲端同步，目前採用純本機模式');
