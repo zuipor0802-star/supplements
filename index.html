@@ -856,6 +856,10 @@
     async function saveAndConnectCloud() {
       const url = $('#cloud-api-url').value.trim();
       if (!url) { showToast('請輸入 Google Apps Script 網址', true); return; }
+      if (url === cloudApiUrl && isCloudVerified()) {
+        closeSheets();
+        return refreshFromCloud(false);
+      }
       cloudApiUrl = url;
       localStorage.setItem(STORAGE_KEY_CLOUD_URL, cloudApiUrl);
       updateCloudStatusUI();
@@ -1238,11 +1242,12 @@
     }
 
     // ---------- dose sheet ----------
-    let doseItem = null, doseVal = 1;
+    // 只記 id：面板開著時若雲端同步換掉了 items，確認時仍要改到最新的那筆
+    let doseId = null, doseVal = 1;
     function openDose(id) {
       const it = findItem(id); if (!it) return;
       const rec = (checkinRecords[getTodayKey()] || {})[it.id];
-      doseItem = it; doseVal = rec ? (Number(rec.daily) || doseOf(it)) : doseOf(it);
+      doseId = it.id; doseVal = rec ? (Number(rec.daily) || doseOf(it)) : doseOf(it);
       $('#doseTitle').textContent = shortName(it.name);
       $('#doseDefault').checked = false;
       $('#doseConfirm').textContent = rec ? '更新這次的份量' : '打卡';
@@ -1250,12 +1255,15 @@
     }
     function updateDose() {
       $('#doseVal').textContent = doseVal;
-      const d = doseOf(doseItem);
+      const it = findItem(doseId); if (!it) return;
+      const d = doseOf(it);
       $('#doseMeta').textContent = doseVal === d ? `每次預設 ${d} 顆` : `每次預設 ${d} 顆，這次改成 ${doseVal} 顆`;
     }
     function confirmDose() {
+      const it = findItem(doseId);
+      if (!it) { closeSheets(); showToast('這個品項已經不存在了', true); return; }
       snapshot();
-      const it = doseItem, key = getTodayKey();
+      const key = getTodayKey();
       if (!checkinRecords[key]) checkinRecords[key] = {};
       const rec = checkinRecords[key][it.id];
       if (rec) { applyPills(it, (Number(rec.daily) || doseOf(it)) - doseVal); rec.daily = doseVal; }
@@ -1431,6 +1439,11 @@
         renderCheckinView();
         return showToast(`${SLOTS[el.dataset.time].name}提醒改為 ${el.value}`);
       }
+    });
+
+    document.addEventListener('input', e => {
+      const el = e.target;
+      if (el.dataset.qtyset) { const v = parseInt(el.value, 10); if (v > 0) shopQty[el.dataset.qtyset] = v; }
     });
 
     $('#addForm').addEventListener('submit', e => {
