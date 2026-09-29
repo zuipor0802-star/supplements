@@ -2,503 +2,430 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>保健品庫存、打卡與提醒工作台 (雲端同步版)</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>保健品管理</title>
+  <meta name="theme-color" content="#f3f5f8" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0e1116" media="(prefers-color-scheme: dark)" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="保健品" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon-192.png" type="image/png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" />
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap');
-    body {
-      font-family: 'Inter', 'Noto Sans TC', sans-serif;
+    /* 版面：淺灰底上的白色浮動卡片、每頁大標題、單一主色；手機全螢幕，桌機置中一欄 */
+    :root {
+      --bg: #f3f5f8; --surface: #ffffff; --surface-2: #f1f3f7; --fg: #191c23; --muted: #6a7282; --line: #e6e9ef;
+      --accent: #0e9f6e; --accent-ink: #ffffff; --accent-soft: #e2f5ec;
+      --warn: #c26a00; --warn-soft: #fdf1dd; --danger: #e11d48; --danger-soft: #fde7ec; --buy: #5b54e8; --buy-soft: #ebeafd;
+      --c-blue: #3b82f6; --c-blue-soft: #e5eefe; --c-violet: #8b5cf6; --c-violet-soft: #efe9fe;
+      --c-amber: #e89a06; --c-amber-soft: #fdf3dc; --c-rose: #f43f5e; --c-rose-soft: #fde7eb;
+      --c-teal: #0fa99a; --c-teal-soft: #dcf6f2; --c-orange: #f26b1d; --c-orange-soft: #feece0;
+      --shadow: 0 1px 2px rgba(22, 30, 48, .04), 0 6px 18px rgba(22, 30, 48, .06);
+      --shadow-lift: 0 2px 4px rgba(22, 30, 48, .06), 0 14px 32px rgba(22, 30, 48, .12);
+      --font: -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+      --font-round: "Outfit", -apple-system, "PingFang TC", "Noto Sans TC", system-ui, sans-serif;
+      --ease-out: cubic-bezier(.2, .8, .2, 1); --ease-in: cubic-bezier(.4, 0, 1, 1);
+      --safe-top: env(safe-area-inset-top, 0px); --safe-bottom: env(safe-area-inset-bottom, 0px);
+      color-scheme: light;
     }
-    input[type=number]::-webkit-inner-spin-button, 
-    input[type=number]::-webkit-outer-spin-button { 
-      -webkit-appearance: none; 
-      margin: 0; 
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0e1116; --surface: #181c23; --surface-2: #20252e; --fg: #eceff4; --muted: #99a2b2; --line: #2a303a;
+        --accent: #34d399; --accent-ink: #062a1d; --accent-soft: #143528;
+        --warn: #fbbf57; --warn-soft: #3a2c10; --danger: #fb7190; --danger-soft: #3d1620; --buy: #a5a1ff; --buy-soft: #26254a;
+        --c-blue: #7aa9ff; --c-blue-soft: #1a2a45; --c-violet: #b69cff; --c-violet-soft: #2a2145;
+        --c-amber: #fbc553; --c-amber-soft: #372a10; --c-rose: #ff8aa0; --c-rose-soft: #3e1a23;
+        --c-teal: #4fd8c7; --c-teal-soft: #12332f; --c-orange: #ffa066; --c-orange-soft: #3b2415;
+        --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.25); --shadow-lift: 0 14px 32px rgba(0,0,0,.45);
+        color-scheme: dark;
+      }
     }
-    input[type=number] {
-      -moz-appearance: textfield;
-    }
-    .custom-scrollbar::-webkit-scrollbar {
-      height: 6px;
-      width: 6px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-      background-color: #cbd5e1;
-      border-radius: 9999px;
-    }
-    .bg-striped-pattern {
-      background-image: repeating-linear-gradient(45deg, transparent, transparent 7px, rgba(255,255,255,0.28) 7px, rgba(255,255,255,0.28) 14px);
-    }
-    .item-card-hover {
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .item-card-hover:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.08);
-    }
-    .tab-btn.active {
-      background-color: #0f172a;
-      color: #ffffff;
-      box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.15);
-    }
+
+    html, body { height: 100%; margin: 0; }
+    body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 16px; line-height: 1.5; -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; }
+    button, input, select { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    button, a, input { touch-action: manipulation; }
+    button:disabled { cursor: default; }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    [hidden] { display: none !important; }
+    svg.i { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+    .r { font-family: var(--font-round); font-variant-numeric: tabular-nums; }
+
+    /* ---------- shell ---------- */
+    .app { position: relative; height: 100vh; height: 100dvh; max-width: 640px; margin: 0 auto; display: grid; grid-template-rows: 1fr auto; overflow: hidden; overflow: clip; }
+    @media (min-width: 700px) { .app { box-shadow: 0 0 0 1px var(--line); } }
+    .scroller { overflow-y: auto; overscroll-behavior: contain; padding-top: var(--safe-top); }
+    .screen { padding: 12px 16px 104px; display: flex; flex-direction: column; gap: 14px; }
+    .screen.enter { animation: enter .22s var(--ease-out); }
+    @keyframes enter { from { opacity: 0; transform: translateY(8px); } }
+    .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; padding: 8px 2px 2px; }
+    .page-head small { display: block; font-size: 14px; color: var(--muted); font-weight: 500; }
+    .page-head h1 { margin: 0; font-family: var(--font-round); font-size: 30px; font-weight: 600; line-height: 1.15; letter-spacing: -.01em; }
+    .head-actions { display: flex; align-items: center; gap: 2px; }
+    .sync { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: 13px; color: var(--muted); padding: 0 8px; white-space: nowrap; border: 0; background: transparent; border-radius: 22px; }
+    .sync .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+    .sync.online .dot { background: var(--accent); }
+    .sync.offline { color: var(--warn); }
+    .sync.offline .dot { background: var(--warn); }
+    .sync .spin { width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--accent); animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .icon-btn { width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: transparent; border-radius: 50%; color: var(--muted); }
+    .icon-btn:active, .sync:active { background: var(--surface-2); }
+
+    .tabbar { display: grid; grid-template-columns: repeat(4, 1fr); background: var(--surface); box-shadow: 0 -1px 0 var(--line); padding-bottom: max(4px, var(--safe-bottom)); }
+    .tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 58px; border: 0; background: transparent; color: var(--muted); font-size: 12px; font-weight: 500; position: relative; }
+    .tab[aria-selected="true"] { color: var(--accent); font-weight: 600; }
+    .tab:active { background: var(--surface-2); }
+    .tab .badge { position: absolute; top: 7px; left: calc(50% + 6px); min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 9px; background: var(--danger); color: #fff; font-size: 11px; line-height: 18px; text-align: center; font-family: var(--font-round); }
+    .fab { position: absolute; right: 18px; bottom: calc(80px + var(--safe-bottom)); width: 58px; height: 58px; border-radius: 50%; border: 0; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; box-shadow: var(--shadow-lift); z-index: 5; transition: transform .15s var(--ease-out); }
+    .fab:active { transform: scale(.94); }
+    .fab svg.i { width: 26px; height: 26px; }
+
+    /* ---------- building blocks ---------- */
+    .card { background: var(--surface); border-radius: 20px; box-shadow: var(--shadow); }
+    .label { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 6px 4px 0; }
+    .label h2 { margin: 0; font-size: 15px; font-weight: 600; }
+    .label span { font-size: 13px; color: var(--muted); }
+    .muted { color: var(--muted); }
+    .btn { min-height: 46px; padding: 0 18px; border-radius: 14px; border: 0; background: var(--surface-2); font-weight: 600; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; color: var(--fg); transition: transform .12s var(--ease-out); }
+    .btn:active { transform: scale(.98); }
+    .btn.primary { background: var(--accent); color: var(--accent-ink); }
+    .btn.buy { background: var(--buy); color: #fff; }
+    .btn.soft { background: var(--accent-soft); color: var(--accent); }
+    .btn.ghost-danger { background: transparent; color: var(--danger); }
+    .btn.confirm { background: var(--danger); color: #fff; }
+    .btn.small { min-height: 40px; font-size: 14px; padding: 0 14px; }
+    .note-line { font-size: 14px; color: var(--muted); margin: 0; }
+    .empty { text-align: center; padding: 28px 16px; color: var(--muted); font-size: 15px; }
+
+    /* 品項圖示：顏色依品項、形狀依劑型（用 <i> 避免被 span 的通用樣式影響） */
+    .pill { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; flex: none; font-style: normal; }
+    .pill svg { width: 24px; height: 24px; }
+    .pill.blue { background: var(--c-blue-soft); color: var(--c-blue); }
+    .pill.violet { background: var(--c-violet-soft); color: var(--c-violet); }
+    .pill.amber { background: var(--c-amber-soft); color: var(--c-amber); }
+    .pill.rose { background: var(--c-rose-soft); color: var(--c-rose); }
+    .pill.teal { background: var(--c-teal-soft); color: var(--c-teal); }
+    .pill.orange { background: var(--c-orange-soft); color: var(--c-orange); }
+
+    /* ---------- today ---------- */
+    .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+    .wday { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 0 8px; border: 1.5px solid transparent; border-radius: 16px; background: var(--surface); box-shadow: var(--shadow); font-size: 12px; color: var(--muted); }
+    .wday.sel { border-color: var(--accent); }
+    .wday.future { box-shadow: none; background: transparent; }
+    .wday b { font-family: var(--font-round); font-size: 15px; font-weight: 600; color: var(--fg); }
+    .ring { width: 28px; height: 28px; }
+    .ring circle { fill: none; stroke-width: 3; }
+    .ring .bgc { stroke: var(--line); }
+    .ring .fgc { stroke: var(--accent); stroke-linecap: round; transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dashoffset .35s var(--ease-out); }
+    .ring .full { fill: var(--accent); stroke: none; }
+    .ring .tick { stroke: var(--accent-ink); stroke-width: 2.2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .day-sum { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; }
+    .day-sum p { margin: 0; font-size: 15px; }
+    .day-sum p span { display: block; font-size: 13px; color: var(--muted); }
+    .day-sum .big { font-family: var(--font-round); font-size: 34px; font-weight: 600; line-height: 1; white-space: nowrap; }
+    .day-sum .big small { font-size: 16px; color: var(--muted); font-weight: 500; }
+    .all-done { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 16px; background: var(--accent-soft); color: var(--accent); font-weight: 600; font-size: 15px; animation: enter .25s var(--ease-out); }
+    .slot-label { display: flex; align-items: center; gap: 8px; padding: 8px 4px 0; }
+    .slot-label h2 { margin: 0; font-size: 15px; font-weight: 600; }
+    .slot-label .t { font-family: var(--font-round); font-size: 15px; color: var(--muted); }
+    .slot-label .n { margin-left: auto; font-family: var(--font-round); font-size: 14px; color: var(--muted); }
+    .now-tag { font-size: 12px; font-weight: 700; color: var(--accent-ink); background: var(--accent); border-radius: 999px; padding: 1px 8px; }
+    .dose-list { display: flex; flex-direction: column; gap: 10px; }
+    .dose-card { display: flex; align-items: center; gap: 4px; padding: 0 8px 0 0; min-height: 76px; }
+    .dose-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 12px 6px 12px 14px; border: 0; background: transparent; text-align: left; align-self: stretch; border-radius: 20px 0 0 20px; }
+    .dose-main .txt { min-width: 0; }
+    .dose-main b { display: block; font-size: 16px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+    .dose-main .sub { display: block; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dose-card.done .dose-main b { color: var(--muted); }
+    .qty { flex: none; min-width: 52px; min-height: 44px; border: 0; border-radius: 12px; background: var(--surface-2); font-size: 13px; color: var(--muted); display: inline-flex; align-items: baseline; justify-content: center; gap: 2px; padding: 11px 8px 0; box-sizing: border-box; }
+    .qty b { font-family: var(--font-round); font-size: 18px; font-weight: 600; color: var(--fg); }
+    .check { flex: none; width: 44px; height: 44px; border: 0; background: transparent; display: grid; place-items: center; padding: 0; }
+    .check i { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; color: transparent; box-sizing: border-box; }
+    .check svg.i { width: 17px; height: 17px; stroke-width: 2.8; }
+    .dose-card.done .check i { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+    .dose-card.pop .check i { animation: pop .26s var(--ease-out); }
+    @keyframes pop { 0% { transform: scale(.7); } 60% { transform: scale(1.15); } 100% { transform: scale(1); } }
+    .dose-main:active, .qty:active { background: var(--surface-2); }
+    .slot-all { align-self: flex-start; }
+
+    /* ---------- inventory ---------- */
+    .alert { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+    .alert-top { display: flex; align-items: center; gap: 10px; }
+    .alert-top .ic { width: 36px; height: 36px; border-radius: 50%; background: var(--warn-soft); color: var(--warn); display: grid; place-items: center; flex: none; }
+    .alert-top b { font-size: 16px; }
+    .alert ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
+    .alert li { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 7px 0; border-top: 1px solid var(--line); font-size: 15px; }
+    .alert li > span:first-child { min-width: 0; }
+    .alert li > span:last-child { font-size: 14px; color: var(--muted); white-space: nowrap; }
+    .alert li em { font-style: normal; font-family: var(--font-round); font-weight: 600; color: var(--fg); }
+    .alert li .late { color: var(--danger); font-weight: 600; }
+    .alert-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .alert-foot span { font-size: 13px; color: var(--muted); }
+    .alert.calm .alert-top .ic { background: var(--accent-soft); color: var(--accent); }
+    .segmented { display: grid; grid-template-columns: repeat(3, 1fr); padding: 4px; gap: 4px; background: var(--surface-2); border-radius: 14px; }
+    .segmented button { min-height: 40px; border: 0; border-radius: 11px; background: transparent; font-size: 15px; font-weight: 500; color: var(--muted); }
+    .segmented button[aria-pressed="true"] { background: var(--surface); color: var(--fg); font-weight: 600; box-shadow: var(--shadow); }
+    .inv-list { display: flex; flex-direction: column; gap: 10px; }
+    .inv-head { width: 100%; border: 0; background: transparent; text-align: left; padding: 14px; display: grid; grid-template-columns: auto 1fr auto; gap: 4px 12px; align-items: center; border-radius: 20px; }
+    .inv-head:active { background: var(--surface-2); }
+    .inv-head .pill { grid-row: span 2; }
+    .inv-name { font-weight: 600; font-size: 16px; line-height: 1.3; min-width: 0; overflow-wrap: anywhere; }
+    .inv-days { grid-row: span 2; text-align: right; line-height: 1; }
+    .inv-days b { font-family: var(--font-round); font-size: 30px; font-weight: 600; }
+    .inv-days small { display: block; font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .inv-days.warn b { color: var(--warn); }
+    .inv-days.danger b, .inv-days.empty b { color: var(--danger); }
+    .inv-sub { font-size: 13px; color: var(--muted); min-width: 0; }
+    .inv-sub .st { font-weight: 600; }
+    .inv-sub .st.warn { color: var(--warn); }
+    .inv-sub .st.danger, .inv-sub .st.empty { color: var(--danger); }
+    .bar { grid-column: 1 / -1; position: relative; height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; margin-top: 6px; }
+    .bar .cur { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--accent); }
+    .bar .cur.warn { background: var(--warn); }
+    .bar .cur.danger, .bar .cur.empty { background: var(--danger); }
+    .bar .buy { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(135deg, var(--buy) 0 3px, transparent 3px 6px); opacity: .6; }
+    .bar .line30 { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--surface); }
+    .inv-body { padding: 4px 14px 14px; display: flex; flex-direction: column; gap: 10px; animation: enter .2s var(--ease-out); }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .row label, .row .lbl { font-size: 15px; }
+    .row label small, .row .lbl small { display: block; font-size: 13px; color: var(--muted); }
+    .stepper { display: flex; align-items: center; background: var(--surface-2); border-radius: 14px; flex: none; }
+    .stepper button { width: 44px; height: 44px; border: 0; background: transparent; font-size: 22px; line-height: 1; border-radius: 14px; }
+    .stepper button:active { background: var(--line); }
+    .stepper input { width: 48px; height: 44px; border: 0; text-align: center; font-family: var(--font-round); font-size: 19px; font-weight: 600; background: transparent; -moz-appearance: textfield; padding: 0; }
+    .stepper input::-webkit-outer-spin-button, .stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .stepper.buy { background: var(--buy-soft); color: var(--buy); }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .actions .btn { flex: 1 1 auto; }
+    .choice { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .choice.three { grid-template-columns: repeat(3, 1fr); }
+    .choice button { min-height: 46px; border-radius: 14px; border: 1.5px solid transparent; background: var(--surface-2); font-size: 15px; font-weight: 500; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 6px; }
+    .choice button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+    .choice .pill { width: 24px; height: 24px; background: transparent; }
+    .choice .pill svg { width: 20px; height: 20px; }
+
+    /* ---------- reminders ---------- */
+    .switch-card { padding: 16px; display: flex; gap: 12px; align-items: center; }
+    .switch-card b { display: block; font-size: 16px; }
+    .switch-card span { font-size: 14px; color: var(--muted); }
+    .switch { width: 52px; height: 32px; border-radius: 16px; border: 0; background: var(--line); position: relative; flex: none; }
+    .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .2s var(--ease-out); }
+    .switch[aria-checked="true"] { background: var(--accent); }
+    .switch[aria-checked="true"]::after { transform: translateX(20px); }
+    .tip-box { padding: 12px 14px; font-size: 14px; background: var(--warn-soft); color: var(--warn); border-radius: 16px; margin: 0; }
+    .rem { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+    .rem-top { display: flex; align-items: center; gap: 10px; }
+    .rem-top svg.i { color: var(--muted); }
+    .rem-top input[type="time"] { font-family: var(--font-round); font-size: 26px; font-weight: 600; border: 0; background: transparent; padding: 0; min-height: 44px; }
+    .rem-top input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
+    .rem-top .when { margin-left: auto; font-size: 14px; color: var(--muted); }
+    .rem-items { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
+    .rem-items .chip { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; background: var(--surface-2); border-radius: 999px; padding: 4px 10px 4px 4px; }
+    .rem-items .pill { width: 24px; height: 24px; }
+    .rem-items .pill svg { width: 15px; height: 15px; }
+    .tips { display: flex; flex-direction: column; }
+    .tip { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--line); }
+    .tip:first-child { border-top: 0; }
+    .tip .txt { min-width: 0; }
+    .tip b { display: block; font-size: 15px; font-weight: 600; }
+    .tip p { margin: 0; font-size: 14px; color: var(--muted); }
+
+    /* ---------- history ---------- */
+    .rate { padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .rate b { font-family: var(--font-round); font-size: 36px; font-weight: 600; line-height: 1; color: var(--accent); }
+    .rate p { margin: 0; font-size: 15px; }
+    .rate p span { display: block; font-size: 13px; color: var(--muted); }
+    .rate-side { display: flex; gap: 18px; text-align: right; }
+    .rate-side b { display: block; font-size: 22px; color: var(--fg); }
+    .rate-side span { font-size: 12px; color: var(--muted); }
+    .cal { padding: 16px; }
+    .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .cal-head b { font-size: 16px; font-weight: 600; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+    .cal-grid .dow { text-align: center; font-size: 12px; color: var(--muted); }
+    .day { aspect-ratio: 1; min-height: 38px; border: 0; border-radius: 10px; background: var(--surface-2); font-family: var(--font-round); font-size: 14px; font-weight: 500; color: var(--muted); display: grid; place-items: center; padding: 0; }
+    .l1 { background: color-mix(in srgb, var(--accent) 22%, var(--surface-2)); color: var(--fg); }
+    .l2 { background: color-mix(in srgb, var(--accent) 45%, var(--surface-2)); color: var(--fg); }
+    .l3 { background: color-mix(in srgb, var(--accent) 70%, var(--surface-2)); color: var(--accent-ink); }
+    .l4 { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+    .day.future { background: transparent; color: var(--line); }
+    .day.sel { outline: 2px solid var(--fg); outline-offset: 1px; }
+    .legend { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 12px; font-size: 12px; color: var(--muted); }
+    .legend i { width: 14px; height: 14px; border-radius: 4px; display: inline-block; background: var(--surface-2); }
+    .adh { padding: 6px 16px 10px; }
+    .adh-row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 4px 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+    .adh-row:first-child { border-top: 0; }
+    .adh-row .pill { width: 32px; height: 32px; grid-row: span 2; }
+    .adh-row .pill svg { width: 18px; height: 18px; }
+    .adh-row b { font-size: 15px; font-weight: 500; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .adh-row em { font-style: normal; font-family: var(--font-round); font-weight: 600; grid-row: span 2; }
+    .adh-bar { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+    .adh-bar div { height: 100%; width: 100%; background: var(--accent); border-radius: 3px; transform-origin: left; }
+    .adh-bar div.low { background: var(--warn); }
+    .detail { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+    .detail h3 { margin: 0; font-size: 16px; font-weight: 600; }
+    .detail ul { margin: 0; padding: 0; list-style: none; }
+    .detail li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 15px; }
+    .detail li:first-child { border-top: 0; }
+    .detail li .pill { width: 30px; height: 30px; }
+    .detail li .pill svg { width: 17px; height: 17px; }
+    .detail li .nm { min-width: 0; }
+    .detail li .tm { margin-left: auto; color: var(--muted); font-size: 14px; font-family: var(--font-round); white-space: nowrap; }
+
+    /* ---------- sheets / toast ---------- */
+    .backdrop { position: absolute; inset: 0; background: rgba(14, 18, 26, .4); z-index: 20; opacity: 0; pointer-events: none; transition: opacity .2s; }
+    .backdrop.open { opacity: 1; pointer-events: auto; }
+    .sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 21; max-height: 88%; overflow-y: auto; overscroll-behavior: contain; background: var(--surface); border-radius: 28px 28px 0 0; padding: 8px 18px calc(22px + var(--safe-bottom)); transform: translateY(calc(100% + 40px)); visibility: hidden; transition: transform .2s var(--ease-in), visibility 0s .2s; box-sizing: border-box; }
+    .sheet.open { transform: translateY(0); visibility: visible; transition: transform .3s var(--ease-out), visibility 0s; }
+    .grabber { width: 40px; height: 5px; border-radius: 3px; background: var(--line); margin: 4px auto 10px; }
+    .sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .sheet-head h2 { margin: 0; font-size: 20px; font-weight: 600; font-family: var(--font-round); }
+    .form { display: flex; flex-direction: column; gap: 14px; }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field > label, .field > .lbl { font-size: 14px; font-weight: 600; color: var(--muted); }
+    .field input[type="text"], .field input[type="number"], .field input[type="url"] { font-size: 16px; min-height: 50px; padding: 0 14px; border: 1.5px solid transparent; border-radius: 14px; background: var(--surface-2); box-sizing: border-box; width: 100%; }
+    .field input:focus { border-color: var(--accent); outline: none; }
+    .field-error { font-size: 14px; color: var(--danger); margin: 0; }
+    .req { color: var(--danger); }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .sheet-actions { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; margin-top: 4px; }
+    .settings-block { display: flex; flex-direction: column; gap: 10px; padding: 14px; background: var(--surface-2); border-radius: 18px; }
+    .settings-block h3 { margin: 0; font-size: 15px; }
+    .settings-block .stepper { background: var(--surface); }
+    .settings-block .field input { background: var(--surface); }
+    .status-line { font-size: 14px; color: var(--muted); display: flex; align-items: center; gap: 8px; margin: 0; }
+    .dose-big { display: flex; align-items: center; justify-content: center; gap: 18px; padding: 6px 0; }
+    .dose-big button { width: 58px; height: 58px; border-radius: 50%; border: 0; background: var(--surface-2); font-size: 28px; }
+    .dose-big output { font-family: var(--font-round); font-size: 60px; font-weight: 600; min-width: 80px; text-align: center; line-height: 1; }
+    .dose-big small { font-size: 16px; color: var(--muted); }
+    .dose-meta { text-align: center; font-size: 14px; color: var(--muted); margin: 0; }
+    .check-opt { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 15px; }
+    .check-opt input { width: 22px; height: 22px; accent-color: var(--accent); }
+    .shop { display: flex; flex-direction: column; gap: 12px; }
+    .shop h3 { margin: 6px 0 0; font-size: 15px; color: var(--muted); font-weight: 600; }
+    .shop-item { background: var(--surface-2); border-radius: 18px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+    .shop-top { display: flex; align-items: center; gap: 10px; }
+    .shop-top .txt { flex: 1; min-width: 0; }
+    .shop-top b { display: block; font-size: 16px; font-weight: 600; }
+    .shop-top .sub { font-size: 13px; color: var(--muted); }
+    .shop-top .late { color: var(--danger); font-weight: 600; }
+    .shop-item .btn { background: var(--surface); }
+    .shop-item .btn.buy { background: var(--buy); }
+    .toast { position: absolute; left: 16px; right: 16px; bottom: calc(84px + var(--safe-bottom)); z-index: 30; background: var(--fg); color: var(--bg); padding: 12px 8px 12px 16px; border-radius: 16px; font-size: 15px; font-weight: 500; opacity: 0; transform: translateY(8px); transition: opacity .2s, transform .2s var(--ease-out); pointer-events: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; box-shadow: var(--shadow-lift); min-height: 24px; }
+    .toast.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .toast.error { background: var(--danger); color: #fff; }
+    .toast button { flex: none; min-height: 36px; padding: 0 12px; border: 0; border-radius: 10px; background: transparent; color: var(--accent-soft); font-weight: 700; font-size: 15px; }
+    .app:has(.sheet.open) .toast { top: calc(16px + var(--safe-top)); bottom: auto; }
+
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
   </style>
 </head>
-<body class="bg-slate-100/70 text-slate-800 antialiased min-h-screen pb-12">
+<body>
+  <div class="app" id="app">
+    <main class="scroller" id="scroller">
+      <section class="screen" id="screen-checkin"></section>
+      <section class="screen" id="screen-inventory" hidden></section>
+      <section class="screen" id="screen-reminder" hidden></section>
+      <section class="screen" id="screen-history" hidden></section>
+    </main>
 
-  <!-- 頂部導航與功能頁籤列 -->
-  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200/80 shadow-xs">
-    <div class="max-w-[1680px] mx-auto px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-xl shadow-md shadow-emerald-600/30">
-          <i class="fa-solid fa-pills"></i>
+    <nav class="tabbar" role="tablist" aria-label="主要分頁">
+      <button class="tab" role="tab" data-tab="checkin" aria-selected="true">
+        <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16 9.8"/></svg>今天
+      </button>
+      <button class="tab" role="tab" data-tab="inventory" aria-selected="false">
+        <svg class="i" viewBox="0 0 24 24"><path d="M3 7.5l9-4.5 9 4.5v9l-9 4.5-9-4.5z"/><path d="M3 7.5l9 4.5 9-4.5M12 12v9"/></svg>庫存<span class="badge" id="invBadge" hidden></span>
+      </button>
+      <button class="tab" role="tab" data-tab="reminder" aria-selected="false">
+        <svg class="i" viewBox="0 0 24 24"><path d="M6 16v-5a6 6 0 1 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>提醒
+      </button>
+      <button class="tab" role="tab" data-tab="history" aria-selected="false">
+        <svg class="i" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>紀錄
+      </button>
+    </nav>
+
+    <button class="fab" id="fab" aria-label="新增保健品" hidden><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+    <div class="backdrop" id="backdrop"></div>
+
+    <div class="sheet" id="sheet-add" role="dialog" aria-modal="true" aria-labelledby="addTitle">
+      <div class="grabber"></div>
+      <div class="sheet-head"><h2 id="addTitle">新增保健品</h2><button class="icon-btn" data-close aria-label="關閉"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+      <form class="form" id="addForm" novalidate>
+        <div class="field"><label for="f-name">品名 <span class="req" aria-hidden="true">*</span></label><input type="text" id="f-name" placeholder="例如：維他命 D3 5000 IU" aria-required="true" aria-describedby="f-name-err" autocomplete="off"><p class="field-error" id="f-name-err" role="alert" hidden>請輸入品名</p></div>
+        <div class="field"><span class="lbl">劑型（決定圖示）</span><div class="choice three" id="formPick"></div></div>
+        <div class="grid2">
+          <div class="field"><label for="f-cap">一罐幾顆</label><input type="number" id="f-cap" inputmode="numeric" value="60" min="1"></div>
+          <div class="field"><label for="f-daily">每次吃幾顆</label><input type="number" id="f-daily" inputmode="numeric" value="1" min="1"></div>
+          <div class="field"><label for="f-bottles">未拆整罐</label><input type="number" id="f-bottles" inputmode="numeric" value="1" min="0"></div>
+          <div class="field"><label for="f-loose">開封散裝</label><input type="number" id="f-loose" inputmode="numeric" value="0" min="0"></div>
         </div>
-        <div>
-          <h1 class="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
-            保健品智能管理工作台
-            <span class="text-[11px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-md hidden sm:inline-block">雲端同步版</span>
-          </h1>
-          <p class="text-[11px] text-slate-400">庫存預警 · 耗盡甘特圖 · 每日時段打卡 · Google 試算表即時聯動</p>
-        </div>
-      </div>
-      
-      <!-- 頁籤導覽列 (Tabs) -->
-      <nav class="flex items-center bg-slate-100 p-1 rounded-xl gap-1 text-xs font-semibold">
-        <button onclick="switchTab('tab-inventory')" id="nav-tab-inventory" class="tab-btn active px-3.5 py-1.5 rounded-lg text-slate-600 transition flex items-center gap-1.5">
-          <i class="fa-solid fa-chart-gantt"></i>
-          <span>庫存與甘特圖</span>
-        </button>
-        <button onclick="switchTab('tab-checkin')" id="nav-tab-checkin" class="tab-btn px-3.5 py-1.5 rounded-lg text-slate-600 transition flex items-center gap-1.5">
-          <i class="fa-solid fa-calendar-check"></i>
-          <span>每日時段打卡</span>
-          <span id="nav-checkin-badge" class="bg-emerald-500 text-white text-[10px] px-1.5 py-0.2 rounded-full hidden">0/11</span>
-        </button>
-        <button onclick="switchTab('tab-reminder')" id="nav-tab-reminder" class="tab-btn px-3.5 py-1.5 rounded-lg text-slate-600 transition flex items-center gap-1.5">
-          <i class="fa-regular fa-bell"></i>
-          <span>提醒與時段設定</span>
-        </button>
-        <button onclick="switchTab('tab-history')" id="nav-tab-history" class="tab-btn px-3.5 py-1.5 rounded-lg text-slate-600 transition flex items-center gap-1.5">
-          <i class="fa-solid fa-clock-rotate-left"></i>
-          <span>消耗紀錄與日曆</span>
-        </button>
-      </nav>
-
-      <!-- 右上角雲端同步與快捷操作 -->
-      <div class="flex items-center gap-2">
-        <!-- 雲端同步狀態燈 -->
-        <button onclick="toggleCloudModal()" id="btn-cloud-status" class="px-2.5 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 transition flex items-center gap-1.5 shadow-xs">
-          <span id="cloud-indicator" class="w-2 h-2 rounded-full bg-slate-400"></span>
-          <span id="cloud-status-text" class="text-slate-600">未設定雲端</span>
-        </button>
-
-        <button onclick="refreshFromCloud(false)" id="btn-manual-sync" class="p-2 text-slate-600 hover:text-emerald-600 hover:bg-slate-100 rounded-xl transition" title="立即從 Google 試算表同步">
-          <i class="fa-solid fa-arrows-rotate text-xs" id="sync-icon"></i>
-        </button>
-
-        <button onclick="toggleAddModal()" class="bg-slate-900 hover:bg-black text-white text-xs font-semibold px-3 py-2 rounded-xl transition flex items-center gap-1.5 active:scale-95 shadow-xs">
-          <i class="fa-solid fa-plus text-[10px]"></i>
-          <span>新增品項</span>
-        </button>
-        <button onclick="resetData()" title="恢復預設數據" class="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition">
-          <i class="fa-solid fa-rotate-left text-xs"></i>
-        </button>
-      </div>
-    </div>
-  </header>
-
-  <!-- 主容器 -->
-  <main class="max-w-[1680px] mx-auto px-3 sm:px-6 mt-4">
-
-    <!-- 頂部即時摘要指標 (所有頁籤通用) -->
-    <section class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mb-4">
-      <div class="bg-white px-3.5 py-2.5 rounded-xl border border-slate-200/80 shadow-xs flex items-center justify-between">
-        <span class="text-xs text-slate-500 font-medium">追蹤總品項</span>
-        <span id="stat-total-count" class="text-sm font-bold text-slate-800">11 款</span>
-      </div>
-      <div class="bg-white px-3.5 py-2.5 rounded-xl border border-rose-100 shadow-xs flex items-center justify-between">
-        <span class="text-xs text-rose-600 font-medium flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-rose-500"></span>已斷貨 / &le;14天
-        </span>
-        <span id="stat-danger-count" class="text-sm font-bold text-rose-600">1 款</span>
-      </div>
-      <div class="bg-white px-3.5 py-2.5 rounded-xl border border-amber-100 shadow-xs flex items-center justify-between">
-        <span class="text-xs text-amber-600 font-medium flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-amber-500"></span>15~30天補貨
-        </span>
-        <span id="stat-warning-count" class="text-sm font-bold text-amber-600">1 款</span>
-      </div>
-      <div class="bg-white px-3.5 py-2.5 rounded-xl border border-emerald-100 shadow-xs flex items-center justify-between">
-        <span class="text-xs text-emerald-600 font-medium flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>今日打卡進度
-        </span>
-        <span id="stat-today-progress" class="text-sm font-bold text-emerald-600">0 / 11 款</span>
-      </div>
-      <div class="bg-indigo-50/80 px-3.5 py-2.5 rounded-xl border border-indigo-100 shadow-xs flex items-center justify-between col-span-2 sm:col-span-1">
-        <span class="text-xs text-indigo-700 font-medium flex items-center gap-1.5">
-          <i class="fa-solid fa-cart-shopping text-xs text-indigo-500"></i>模擬採購罐數
-        </span>
-        <span id="stat-purchased-bottles" class="text-sm font-bold text-indigo-700">0 罐</span>
-      </div>
-    </section>
-
-    <!-- ==================== 頁籤 1: 庫存與甘特圖 ==================== -->
-    <div id="tab-inventory" class="tab-content space-y-4">
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        
-        <!-- 左欄：庫存控制與採購調整區 (佔 4 欄) -->
-        <div class="lg:col-span-5 xl:col-span-4 space-y-2.5">
-          <div class="flex items-center justify-between px-1">
-            <div class="flex items-center gap-2">
-              <h2 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-                <i class="fa-solid fa-sliders text-emerald-600"></i>
-                <span>庫存與採購微調</span>
-              </h2>
-              <span class="text-[11px] text-slate-400">（即時連動右側）</span>
-            </div>
-
-            <!-- 快速篩選按鈕 -->
-            <div class="flex items-center gap-1 text-[11px] bg-white p-0.5 rounded-lg border border-slate-200">
-              <button onclick="setFilter('all')" id="filter-all" class="px-2 py-0.5 rounded font-medium bg-slate-800 text-white">全部</button>
-              <button onclick="setFilter('need')" id="filter-need" class="px-2 py-0.5 rounded font-medium text-slate-600 hover:text-slate-900">需補貨</button>
-              <button onclick="setFilter('safe')" id="filter-safe" class="px-2 py-0.5 rounded font-medium text-slate-600 hover:text-slate-900">充足</button>
-            </div>
-          </div>
-
-          <!-- 保健品微調卡片列表 -->
-          <div id="cards-container" class="space-y-2.5"></div>
-        </div>
-
-        <!-- 右欄：即時甘特圖視窗 (佔 8 欄，釘選視野) -->
-        <div class="lg:col-span-7 xl:col-span-8 lg:sticky lg:top-[68px]">
-          <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm">
-            
-            <div class="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-100">
-              <div>
-                <div class="flex items-center gap-2">
-                  <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  <h3 class="text-sm sm:text-base font-bold text-slate-900">耗盡時間軸預測 (Gantt Timeline)</h3>
-                </div>
-                <p class="text-[11px] text-slate-400 mt-0.5">深色為現有庫存天數，紫色斜紋為採購延伸天數</p>
-              </div>
-              
-              <div class="flex items-center gap-2">
-                <span id="gantt-scale-indicator" class="text-[11px] text-indigo-700 bg-indigo-50 font-semibold px-2 py-0.5 rounded-md border border-indigo-100">
-                  動態軸長
-                </span>
-              </div>
-            </div>
-
-            <!-- 甘特圖可橫向滾動容器 -->
-            <div class="overflow-x-auto custom-scrollbar">
-              <div class="min-w-[580px]">
-                
-                <!-- 時間表頭刻度 -->
-                <div class="grid grid-cols-12 text-[11px] font-semibold text-slate-400 pb-2 border-b border-slate-100 select-none items-center">
-                  <div class="col-span-3 pr-2 font-bold text-slate-500">
-                    品項名稱
-                  </div>
-                  <div class="col-span-9 flex items-center gap-2">
-                    <div id="gantt-ticks" class="relative flex-1 h-5"></div>
-                    <div class="w-20 shrink-0 text-right pr-1 font-bold text-slate-400">
-                      可吃天數
-                    </div>
-                  </div>
-                </div>
-
-                <!-- 動態甘特圖列 -->
-                <div id="gantt-rows" class="divide-y divide-slate-100 mt-1.5"></div>
-              </div>
-            </div>
-
-            <!-- 甘特圖底端圖例 -->
-            <div class="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between text-[11px] text-slate-500 gap-2">
-              <div class="flex items-center gap-3">
-                <span class="flex items-center gap-1.5 font-medium text-slate-700">
-                  <span class="w-3 h-2.5 rounded bg-emerald-600 inline-block"></span> 現貨天數
-                </span>
-                <span class="flex items-center gap-1.5 font-medium text-indigo-700">
-                  <span class="w-3 h-2.5 rounded bg-indigo-500 bg-striped-pattern inline-block border border-indigo-300"></span> 採購延伸
-                </span>
-                <span class="flex items-center gap-1.5 font-medium text-amber-600">
-                  <span class="w-2.5 h-0.5 border-t border-dashed border-amber-400 inline-block"></span> 30天補貨線
-                </span>
-              </div>
-              <span class="text-slate-400">由急迫至充裕排序</span>
-            </div>
-
-          </div>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- ==================== 頁籤 2: 每日時段打卡與消耗 ==================== -->
-    <div id="tab-checkin" class="tab-content hidden space-y-4">
-      <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <div class="flex items-center gap-2.5">
-            <span id="today-date-badge" class="px-3 py-1 bg-slate-900 text-white font-bold text-xs rounded-lg"></span>
-            <h2 class="text-base font-bold text-slate-800">今日用藥與打卡紀錄</h2>
-          </div>
-          <p class="text-xs text-slate-400 mt-1">打卡後會自動扣除庫存並同步至 Google 試算表與甘特圖！</p>
-        </div>
-
-        <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
-          <div class="text-right">
-            <div class="text-xs text-slate-400">今日完成率</div>
-            <div id="today-rate-text" class="text-base font-bold text-emerald-600">0%</div>
-          </div>
-          <div class="w-32 bg-slate-100 rounded-full h-2.5 overflow-hidden">
-            <div id="today-rate-bar" class="bg-emerald-500 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
-          </div>
-          <button onclick="consumeAllToday()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-3.5 py-2 rounded-xl transition shadow-xs active:scale-95">
-            <i class="fa-solid fa-check-double mr-1"></i>今日全部打卡
-          </button>
-        </div>
-      </div>
-
-      <!-- 四大時段分組卡片 -->
-      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4" id="time-slots-container"></div>
-    </div>
-
-    <!-- ==================== 頁籤 3: 提醒與時段設定 ==================== -->
-    <div id="tab-reminder" class="tab-content hidden space-y-4">
-      <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm max-w-4xl mx-auto">
-        <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
-          <div>
-            <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
-              <i class="fa-solid fa-bell text-indigo-600"></i> 服藥定時提醒設定
-            </h2>
-            <p class="text-xs text-slate-400 mt-0.5">自訂各時段推播時間，瀏覽器會在時間到達時進行提示</p>
-          </div>
-          <button onclick="requestNotificationPermission()" id="btn-notify-perm" class="px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 hover:bg-slate-50 transition flex items-center gap-1.5">
-            <i class="fa-regular fa-bell"></i>
-            <span id="notify-status-text">啟用系統推播通知</span>
-          </button>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div class="bg-amber-50/60 rounded-xl p-4 border border-amber-200/60 flex items-center justify-between">
-            <div>
-              <span class="text-xs font-bold text-amber-900 flex items-center gap-1.5">
-                <i class="fa-solid fa-sun text-amber-500"></i> 晨間 / 空腹時段
-              </span>
-              <p class="text-[11px] text-amber-700/80 mt-0.5">精胺酸 (空腹)、B群、黑瑪卡、葉黃素</p>
-            </div>
-            <input type="time" id="reminder-time-morning" onchange="saveReminderTimes()" class="bg-white px-2 py-1 border border-amber-300 rounded-lg text-xs font-bold text-slate-800 focus:outline-none" value="08:00" />
-          </div>
-
-          <div class="bg-blue-50/60 rounded-xl p-4 border border-blue-200/60 flex items-center justify-between">
-            <div>
-              <span class="text-xs font-bold text-blue-900 flex items-center gap-1.5">
-                <i class="fa-solid fa-utensils text-blue-500"></i> 午間隨餐時段
-              </span>
-              <p class="text-[11px] text-blue-700/80 mt-0.5">魚油 (脂溶)、薑黃素、鋅、豔紫鉚</p>
-            </div>
-            <input type="time" id="reminder-time-lunch" onchange="saveReminderTimes()" class="bg-white px-2 py-1 border border-blue-300 rounded-lg text-xs font-bold text-slate-800 focus:outline-none" value="12:30" />
-          </div>
-
-          <div class="bg-orange-50/60 rounded-xl p-4 border border-orange-200/60 flex items-center justify-between">
-            <div>
-              <span class="text-xs font-bold text-orange-900 flex items-center gap-1.5">
-                <i class="fa-solid fa-cloud-sun text-orange-500"></i> 晚間隨餐時段
-              </span>
-              <p class="text-[11px] text-orange-700/80 mt-0.5">南瓜籽萃取、茄紅素 (脂溶性)</p>
-            </div>
-            <input type="time" id="reminder-time-dinner" onchange="saveReminderTimes()" class="bg-white px-2 py-1 border border-orange-300 rounded-lg text-xs font-bold text-slate-800 focus:outline-none" value="18:30" />
-          </div>
-
-          <div class="bg-indigo-50/60 rounded-xl p-4 border border-indigo-200/60 flex items-center justify-between">
-            <div>
-              <span class="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
-                <i class="fa-solid fa-moon text-indigo-500"></i> 睡前 / 放鬆時段
-              </span>
-              <p class="text-[11px] text-indigo-700/80 mt-0.5">南非醉茄 KSM-66 (幫助調節舒壓)</p>
-            </div>
-            <input type="time" id="reminder-time-bedtime" onchange="saveReminderTimes()" class="bg-white px-2 py-1 border border-indigo-300 rounded-lg text-xs font-bold text-slate-800 focus:outline-none" value="22:00" />
-          </div>
-        </div>
-
-        <div class="mt-5 p-4 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div class="text-xs text-slate-500">
-            <span class="font-bold text-slate-700 block mb-0.5">💡 智能提醒運作方式：</span>
-            只要開啟本分頁，時間一到系統會發出鈴聲與提示（授權推播亦會收到系統推播）。
-          </div>
-          <button onclick="testNotificationSound()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-xs transition shrink-0 active:scale-95">
-            <i class="fa-solid fa-volume-high mr-1"></i> 測試提醒提示音
-          </button>
-        </div>
-
-        <div class="mt-6 pt-5 border-t border-slate-100">
-          <h3 class="text-xs font-bold text-slate-700 mb-3 flex items-center gap-1.5">
-            <i class="fa-solid fa-circle-info text-emerald-600"></i> 11 款保健品最佳吸收時段與注意事項
-          </h3>
-          <div class="overflow-x-auto">
-            <table class="w-full text-[11px] text-left">
-              <thead class="bg-slate-100 text-slate-500 uppercase">
-                <tr>
-                  <th class="py-2 px-3 rounded-l-lg">保健品品項</th>
-                  <th class="py-2 px-3">建議時段</th>
-                  <th class="py-2 px-3">每日份量</th>
-                  <th class="py-2 px-3 rounded-r-lg">服用小技巧</th>
-                </tr>
-              </thead>
-              <tbody id="timing-guide-tbody" class="divide-y divide-slate-100 text-slate-700"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ==================== 頁籤 4: 消耗紀錄與日曆 ==================== -->
-    <div id="tab-history" class="tab-content hidden space-y-4">
-      <div class="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-5">
-        <div class="lg:col-span-7 bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
-          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-            <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
-              <i class="fa-solid fa-fire text-orange-500"></i> 最近 7 天打卡連續紀錄
-            </h3>
-            <span class="text-xs text-slate-400">每天養成健康好習慣</span>
-          </div>
-          <div class="grid grid-cols-7 gap-2 text-center" id="recent-7days-container"></div>
-          <div class="pt-3 border-t border-slate-100">
-            <h4 class="text-xs font-bold text-slate-700 mb-2">今天打卡清單明細</h4>
-            <div id="today-consumed-list" class="space-y-1.5 max-h-[300px] overflow-y-auto custom-scrollbar pr-1"></div>
-          </div>
-        </div>
-
-        <div class="lg:col-span-5 bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
-          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-            <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
-              <i class="fa-regular fa-calendar-days text-indigo-600"></i> 本月打卡日曆
-            </h3>
-            <span id="calendar-month-title" class="text-xs font-bold text-slate-600"></span>
-          </div>
-          <div id="mini-calendar" class="grid grid-cols-7 gap-1 text-center text-xs"></div>
-          <div class="pt-3 border-t border-slate-100 text-xs text-slate-500 space-y-1.5">
-            <div class="flex items-center justify-between">
-              <span>歷史累計打卡天數</span>
-              <span id="stat-total-checkin-days" class="font-bold text-slate-800">1 天</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span>累計消耗保健品顆數</span>
-              <span id="stat-total-pills-taken" class="font-bold text-emerald-600">12 顆</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </main>
-
-  <!-- 雲端同步設定彈窗 (Google Sheets) -->
-  <div id="cloud-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 transition-all">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-        <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
-          <i class="fa-solid fa-cloud text-emerald-600"></i> Google 試算表雲端同步設定
-        </h3>
-        <button onclick="toggleCloudModal()" class="text-slate-400 hover:text-slate-600 p-1">
-          <i class="fa-solid fa-xmark text-sm"></i>
-        </button>
-      </div>
-
-      <div class="mt-3 space-y-3 text-xs">
-        <p class="text-slate-500 leading-relaxed">
-          貼上您發布的 Google Apps Script 網頁應用程式網址，電腦、手機與平板即可全面即時同步！
-        </p>
-
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">Google Apps Script API 網址</label>
-          <input 
-            type="url" 
-            id="cloud-api-url" 
-            placeholder="https://script.google.com/macros/s/AKfycb.../exec"
-            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500" 
-          />
-        </div>
-
-        <div class="flex items-center justify-between pt-2">
-          <button onclick="clearCloudApi()" class="text-rose-600 hover:underline">清除設定</button>
-          <div class="flex items-center gap-2">
-            <button onclick="toggleCloudModal()" class="px-3 py-1.5 text-slate-600 hover:bg-slate-100 rounded-xl transition">關閉</button>
-            <button onclick="saveAndConnectCloud()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-1.5 rounded-xl shadow-xs transition">
-              儲存並立即同步
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 彈窗式新增品項表單 -->
-  <div id="add-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-2xl max-w-lg w-full p-5 shadow-2xl border border-slate-200 transition-all">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-        <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
-          <i class="fa-solid fa-circle-plus text-emerald-600"></i> 新增保健品品項
-        </h3>
-        <button onclick="toggleAddModal()" class="text-slate-400 hover:text-slate-600 p-1">
-          <i class="fa-solid fa-xmark text-sm"></i>
-        </button>
-      </div>
-
-      <form id="add-form" onsubmit="handleAddItem(event)" class="mt-4 space-y-3">
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">保健品品名 *</label>
-          <input type="text" id="form-name" required placeholder="例如：維他命 D3 5000 IU" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500" />
-        </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">單罐規格 (顆/罐)</label>
-            <input type="number" id="form-capacity" min="1" value="60" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500" />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">每日吃幾顆</label>
-            <input type="number" id="form-daily" min="0.1" step="0.5" value="1" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500" />
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">現有未拆整罐</label>
-            <input type="number" id="form-bottles" min="0" value="1" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500" />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">開封散裝顆數</label>
-            <input type="number" id="form-loose" min="0" value="0" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500" />
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">建議服用時段</label>
-            <select id="form-slot" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500">
-              <option value="morning">晨間 / 空腹</option>
-              <option value="lunch" selected>午間隨餐</option>
-              <option value="dinner">晚間隨餐</option>
-              <option value="bedtime">睡前 / 放鬆</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">服用小備註</label>
-            <input type="text" id="form-notes" placeholder="例如：隨油脂餐吸收佳" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500" />
-          </div>
-        </div>
-        <div class="flex items-center justify-end gap-2 pt-2">
-          <button type="button" onclick="toggleAddModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition">取消</button>
-          <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 text-xs font-bold rounded-xl shadow transition">確認加入</button>
-        </div>
+        <div class="field"><span class="lbl">服用時段</span><div class="choice" id="slotPick"></div></div>
+        <div class="field"><label for="f-notes">小備註</label><input type="text" id="f-notes" placeholder="例如：隨油脂餐吸收佳"></div>
+        <div class="field"><label for="f-url">購買連結</label><input type="url" id="f-url" placeholder="https://" inputmode="url"></div>
+        <div class="sheet-actions"><button type="button" class="btn" data-close>取消</button><button type="submit" class="btn primary">加入</button></div>
       </form>
     </div>
-  </div>
 
-  <!-- Toast 訊息提示元件 -->
-  <div id="toast" class="fixed bottom-6 right-6 z-50 pointer-events-none flex items-center gap-2 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl text-xs font-semibold transform translate-y-16 opacity-0 transition-all duration-300">
-    <i class="fa-solid fa-circle-check text-emerald-400"></i>
-    <span id="toast-text">已更新</span>
+    <div class="sheet" id="sheet-dose" role="dialog" aria-modal="true" aria-labelledby="doseTitle">
+      <div class="grabber"></div>
+      <div class="sheet-head"><h2 id="doseTitle">這次吃幾顆</h2><button class="icon-btn" data-close aria-label="關閉"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+      <div class="form">
+        <div class="dose-big">
+          <button type="button" id="doseMinus" aria-label="少一顆">−</button>
+          <output id="doseVal" aria-live="polite">1</output><small>顆</small>
+          <button type="button" id="dosePlus" aria-label="多一顆">＋</button>
+        </div>
+        <p class="dose-meta" id="doseMeta"></p>
+        <label class="check-opt"><input type="checkbox" id="doseDefault">以後每次都吃這個份量</label>
+        <div class="sheet-actions"><button type="button" class="btn" data-close>取消</button><button type="button" class="btn primary" id="doseConfirm">打卡</button></div>
+      </div>
+    </div>
+
+    <div class="sheet" id="sheet-shop" role="dialog" aria-modal="true" aria-labelledby="shopTitle">
+      <div class="grabber"></div>
+      <div class="sheet-head"><h2 id="shopTitle">購物清單</h2><button class="icon-btn" data-close aria-label="關閉"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+      <div class="shop" id="shopBody"></div>
+    </div>
+
+    <div class="sheet" id="sheet-settings" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <div class="grabber"></div>
+      <div class="sheet-head"><h2 id="settingsTitle">設定</h2><button class="icon-btn" data-close aria-label="關閉"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+      <div class="form">
+        <div class="settings-block">
+          <h3>Google 試算表同步</h3>
+          <p class="status-line" id="cloudStatusLine"></p>
+          <div class="field"><label for="cloud-api-url">Apps Script 網址</label><input type="url" id="cloud-api-url" placeholder="https://script.google.com/macros/s/…/exec" inputmode="url" autocomplete="off"></div>
+          <div class="sheet-actions"><button type="button" class="btn ghost-danger" id="cloudClear">清除</button><button type="button" class="btn primary" id="cloudSave">儲存並同步</button></div>
+        </div>
+        <div class="settings-block">
+          <div class="row">
+            <label for="leadDays">寄送天數<small>下單到收貨大約幾天，用來算最晚下單日（只存在這台裝置）</small></label>
+            <div class="stepper">
+              <button type="button" data-lead="-1" aria-label="寄送天數減一">−</button>
+              <input type="number" inputmode="numeric" id="leadDays" min="0">
+              <button type="button" data-lead="1" aria-label="寄送天數加一">＋</button>
+            </div>
+          </div>
+        </div>
+        <div class="settings-block">
+          <h3>重設品項</h3>
+          <p class="note-line">把品項換回內建的 11 款預設資料，打卡紀錄不受影響。</p>
+          <button type="button" class="btn ghost-danger" id="resetBtn">重設為預設品項</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </div>
 
   <script>
-    // 預設 11 款保健品最新盤點數據
     const DEFAULT_DATA = [
       { id: 1, name: "NOW Foods L-OptiZinc (鋅)", capacity: 100, bottles: 2, loose: 5, purchased: 0, daily: 1, slot: 'lunch', notes: '隨餐服用，避免空腹刺激胃部', url: "https://www.iherb.com/pr/now-foods-l-optizinc-100-veg-capsules/738" },
       { id: 2, name: "Life Extension 生物活性完整 B 群", capacity: 60, bottles: 1, loose: 10, purchased: 0, daily: 2, slot: 'morning', notes: '早/午餐後隨餐，提供日間活力', url: "https://www.iherb.com/pr/life-extension-bioactive-complete-b-complex-60-vegetarian-capsules/67051" },
@@ -590,7 +517,6 @@
         refreshFromCloud();
       }
     }
-    initData();
 
     // 從背景切回 App 時檢查雲端是否有其他裝置的更新
     document.addEventListener('visibilitychange', () => {
@@ -741,6 +667,7 @@
 
         if (result.status === "success" && result.data) {
           setCloudRevision(result.data.revision);
+          undoSnap = null;  // 資料被雲端取代後，舊的復原快照不再適用
           const cloudHasItems = Array.isArray(result.data.items) && result.data.items.length > 0;
           const cloudHasCheckins = !!result.data.checkins &&
             Object.values(result.data.checkins).some(day => day && Object.keys(day).length > 0);
@@ -782,64 +709,163 @@
       }
     }
 
-    function setSyncLoading(loading) {
-      isSyncing = loading;
-      const icon = document.getElementById('sync-icon');
-      if (icon) {
-        if (loading) icon.classList.add('fa-spin', 'text-emerald-600');
-        else icon.classList.remove('fa-spin', 'text-emerald-600');
-      }
+
+    // =====================================================================
+    //  以下為介面層（v4 手機版）
+    // =====================================================================
+    const SLOTS = {
+      morning: { name: '晨間空腹' },
+      lunch: { name: '午間隨餐' },
+      dinner: { name: '晚間隨餐' },
+      bedtime: { name: '睡前放鬆' }
+    };
+    const SLOT_ORDER = ['morning', 'lunch', 'dinner', 'bedtime'];
+    const FORMS = { capsule: '膠囊', softgel: '軟膠囊', tablet: '錠劑' };
+    const COLORS = ['blue', 'amber', 'violet', 'teal', 'orange', 'rose'];
+    const WEEK = ['日', '一', '二', '三', '四', '五', '六'];
+    const STORAGE_KEY_LEAD_DAYS = 'supplement_tracker_lead_days';
+
+    let tab = 'checkin';
+    let viewDay = null;           // 今天頁正在看哪一天（null＝今天）
+    let selectedDay = null;       // 紀錄頁選的日期（null＝今天）
+    let openItem = null;
+    let addSlot = 'lunch', addForm = 'capsule';
+    let leadDays = 10;
+    let pendingDelete = null, pendingDeleteTimer = null;
+    let pendingReset = false, pendingResetTimer = null;
+    let justChecked = null;
+    let undoSnap = null;
+    let cloudState = { status: 'none', text: '未設定雲端' };
+    const shopQty = {};
+    try { const v = parseInt(localStorage.getItem(STORAGE_KEY_LEAD_DAYS), 10); if (!isNaN(v)) leadDays = v; } catch (e) {}
+
+    // ---------- helpers ----------
+    const $ = s => document.querySelector(s);
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const keyOf = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const fromKey = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+    const startOfToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
+    const nowHM = () => { const n = new Date(); return `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`; };
+    const svgI = d => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
+    const icon = {
+      check: svgI('<path d="M6 12.5l4 4L18 8"/>'),
+      ext: svgI('<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>'),
+      trash: svgI('<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>'),
+      inbox: svgI('<path d="M4 13h4l2 3h4l2-3h4"/><path d="M4 13l2-8h12l2 8v6H4z"/>'),
+      gear: svgI('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'),
+      clock: svgI('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
+      alert: svgI('<path d="M12 3l9.5 17h-19z"/><path d="M12 10v4M12 17.5h.01"/>'),
+      ok: svgI('<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16 9.8"/>'),
+      bell: svgI('<path d="M6 16v-5a6 6 0 1 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>'),
+      cart: svgI('<path d="M3 4h2l2.4 11h10.2L20 7H6.2"/><circle cx="9" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/>')
+    };
+    const FORM_SVG = {
+      capsule: '<svg viewBox="0 0 24 24"><g transform="rotate(-40 12 12)"><rect x="3.5" y="8" width="17" height="8" rx="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 8h4.5a4 4 0 0 1 0 8H12z" fill="currentColor"/></g></svg>',
+      softgel: '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="5.6" ry="8" fill="currentColor" transform="rotate(35 12 12)"/><ellipse cx="9.8" cy="9.4" rx="1.3" ry="2.6" fill="#fff" opacity=".55" transform="rotate(35 9.8 9.4)"/></svg>',
+      tablet: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5" fill="currentColor"/><path d="M7.2 12h9.6" stroke="#fff" stroke-width="1.6" opacity=".6"/></svg>'
+    };
+
+    // 舊資料沒有劑型欄位：依品名猜一個，使用者可在庫存頁改
+    function inferForm(name) {
+      if (/softgel|軟膠囊|魚油|fish oil|omega|葉黃素|lutein|茄紅素|lycopene|q10|維生素\s*[de]|vitamin\s*[de]/i.test(name || '')) return 'softgel';
+      if (/tablet|錠/i.test(name || '')) return 'tablet';
+      return 'capsule';
+    }
+    const formOf = it => FORMS[it.form] ? it.form : inferForm(it.name);
+    function colorOf(it) {
+      const s = String(it.id); let h = 0;
+      for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+      return COLORS[h % COLORS.length];
+    }
+    const pill = it => `<i class="pill ${colorOf(it)}" aria-hidden="true">${FORM_SVG[formOf(it)]}</i>`;
+    function shortName(name) {
+      // 去掉品牌前綴；中文只出現在括號裡（例如「L-OptiZinc (鋅)」）時保留全名
+      name = String(name || '');
+      const i = name.search(/[一-鿿]/);
+      if (i < 0) return name;
+      const before = name.slice(0, i);
+      if ((before.match(/\(/g) || []).length > (before.match(/\)/g) || []).length) return name;
+      return name.slice(i);
+    }
+    const brandOf = name => { const s = shortName(name); return s === name ? '' : String(name).slice(0, name.length - s.length).trim(); };
+    const findItem = id => items.find(it => String(it.id) === String(id));
+    const slotOf = it => SLOTS[it.slot] ? it.slot : 'lunch';
+    const doseOf = it => Number(it.daily) > 0 ? Number(it.daily) : 1;
+    const dayDone = key => { const d = checkinRecords[key]; return d ? items.filter(it => d[it.id]).length : 0; };
+
+    function stats(it) {
+      const cap = Number(it.capacity) || 0;
+      const cur = Math.max(0, Number(it.bottles) || 0) * cap + Math.max(0, Number(it.loose) || 0);
+      const daily = doseOf(it);
+      const days = Math.floor(cur / daily);
+      const buyDays = Math.floor(Math.max(0, Number(it.purchased) || 0) * cap / daily);
+      let status = 'ok', label = '充足';
+      if (days <= 0) { status = 'empty'; label = '已斷貨'; }
+      else if (days <= 14) { status = 'danger'; label = '即將斷貨'; }
+      else if (days <= 30) { status = 'warn'; label = '建議下單'; }
+      const t = startOfToday();
+      const end = new Date(t); end.setDate(end.getDate() + days);
+      const orderIn = days - leadDays;
+      const ob = new Date(t); ob.setDate(ob.getDate() + Math.max(0, orderIn));
+      return { cur, days, buyDays, status, label, end: `${end.getMonth() + 1}/${end.getDate()}`, orderIn, orderBy: `${ob.getMonth() + 1}/${ob.getDate()}` };
+    }
+    const suggestQty = it => Math.max(1, Math.ceil((90 * doseOf(it) - stats(it).cur) / (Number(it.capacity) || 1)));
+
+    function applyPills(it, delta) {
+      const cap = Number(it.capacity) > 0 ? Number(it.capacity) : 1;
+      const total = Math.max(0, (Number(it.bottles) || 0) * cap + (Number(it.loose) || 0) + delta);
+      it.bottles = Math.floor(total / cap);
+      it.loose = total % cap;
     }
 
+    function currentSlot() {
+      const hm = nowHM(); let cur = 'morning';
+      SLOT_ORDER.forEach(s => { if (hm >= (reminderTimes[s] || '99:99')) cur = s; });
+      return cur;
+    }
+
+    // ---------- sync status (sync core 會呼叫這幾個函式) ----------
+    function updateCloudIndicator(status, text) { cloudState = { status, text }; paintSync(); }
+    function setSyncLoading(loading) { isSyncing = loading; paintSync(); }
     function updateCloudStatusUI() {
-      const input = document.getElementById('cloud-api-url');
-      if (input) input.value = cloudApiUrl;
-      if (cloudApiUrl) {
-        updateCloudIndicator('online', '雲端就緒');
-      } else {
-        updateCloudIndicator('none', '未設定雲端');
-      }
+      const input = $('#cloud-api-url'); if (input) input.value = cloudApiUrl;
+      if (cloudApiUrl) updateCloudIndicator('online', '雲端就緒');
+      else updateCloudIndicator('none', '未設定雲端');
     }
-
-    function updateCloudIndicator(status, text) {
-      const dot = document.getElementById('cloud-indicator');
-      const label = document.getElementById('cloud-status-text');
-      if (!dot || !label) return;
-
-      label.textContent = text;
-      if (status === 'online') {
-        dot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
-      } else if (status === 'offline') {
-        dot.className = "w-2 h-2 rounded-full bg-amber-500";
-      } else {
-        dot.className = "w-2 h-2 rounded-full bg-slate-400";
-      }
+    function paintSync() {
+      const short = isSyncing ? '同步中' : cloudState.status === 'online' ? '已同步' : cloudState.status === 'offline' ? '未同步' : '未連線';
+      document.querySelectorAll('.sync').forEach(el => {
+        el.className = `sync ${isSyncing ? 'busy' : cloudState.status}`;
+        el.innerHTML = `${isSyncing ? '<span class="spin" aria-hidden="true"></span>' : '<span class="dot" aria-hidden="true"></span>'}${short}`;
+        el.setAttribute('aria-label', `同步狀態：${isSyncing ? '同步中' : cloudState.text}，點擊開啟設定`);
+      });
+      const line = $('#cloudStatusLine');
+      if (line) line.textContent = `目前狀態：${isSyncing ? '同步中…' : cloudState.text}`;
     }
-
     function toggleCloudModal() {
-      const m = document.getElementById('cloud-modal');
-      m.classList.toggle('hidden');
-      if (!m.classList.contains('hidden')) {
-        document.getElementById('cloud-api-url').value = cloudApiUrl;
-      }
+      if ($('#sheet-settings').classList.contains('open')) closeSheets(); else openSettings();
+    }
+    function openSettings() {
+      $('#cloud-api-url').value = cloudApiUrl;
+      $('#leadDays').value = leadDays;
+      pendingReset = false; paintReset();
+      paintSync();
+      openSheet('sheet-settings');
     }
 
     async function saveAndConnectCloud() {
-      const url = document.getElementById('cloud-api-url').value.trim();
-      if (!url) {
-        showToast('請輸入有效的 Google Apps Script 網址', true);
-        return;
-      }
+      const url = $('#cloud-api-url').value.trim();
+      if (!url) { showToast('請輸入 Google Apps Script 網址', true); return; }
       cloudApiUrl = url;
       localStorage.setItem(STORAGE_KEY_CLOUD_URL, cloudApiUrl);
       updateCloudStatusUI();
-      toggleCloudModal();
-      showToast('雲端 API 設定已儲存，正在讀取雲端資料...');
+      closeSheets();
+      showToast('已儲存，正在讀取雲端資料…');
       // 先拉後推：雲端已有資料就以雲端為準；只有雲端是空的才上傳本機資料
       const result = await syncWithCloud();
       if (result === 'empty') {
         await pushToCloud();
-        showToast('雲端尚無資料，已上傳本機資料');
+        showToast('雲端還沒有資料，已上傳本機資料');
       }
     }
 
@@ -850,680 +876,220 @@
       localStorage.removeItem(STORAGE_KEY_CLOUD_REVISION);
       setCloudDirty(false);
       updateCloudStatusUI();
-      toggleCloudModal();
-      showToast('已取消雲端同步，目前採用純本機模式');
+      closeSheets();
+      showToast('已取消雲端同步，資料只存在這台裝置');
     }
 
-    function calculateStats(item) {
-      const currentPills = (Math.max(0, item.bottles || 0) * (item.capacity || 0)) + Math.max(0, item.loose || 0);
-      const purchasedPills = Math.max(0, item.purchased || 0) * (item.capacity || 0);
-      const totalCombinedPills = currentPills + purchasedPills;
-
-      const daily = Number(item.daily) > 0 ? Number(item.daily) : 1;
-      const currentDays = Math.floor(currentPills / daily);
-      const purchasedDays = Math.floor(purchasedPills / daily);
-      const totalDays = currentDays + purchasedDays;
-
-      const currentTarget = new Date();
-      currentTarget.setDate(currentTarget.getDate() + currentDays);
-      const currentFinishShort = `${currentTarget.getMonth() + 1}/${currentTarget.getDate()}`;
-
-      const totalTarget = new Date();
-      totalTarget.setDate(totalTarget.getDate() + totalDays);
-      const totalFinishShort = `${totalTarget.getMonth() + 1}/${totalTarget.getDate()}`;
-
-      let status = 'safe';
-      let colorBg = 'bg-emerald-600';
-      let badgeStyle = 'bg-emerald-100 text-emerald-800 border-emerald-200';
-      let statusText = '充足';
-
-      if (currentDays <= 0) {
-        status = 'empty';
-        colorBg = 'bg-slate-400';
-        badgeStyle = 'bg-rose-100 text-rose-800 border-rose-200';
-        statusText = '現貨已斷';
-      } else if (currentDays <= 14) {
-        status = 'danger';
-        colorBg = 'bg-rose-500';
-        badgeStyle = 'bg-rose-100 text-rose-800 border-rose-200';
-        statusText = '即將斷貨';
-      } else if (currentDays <= 30) {
-        status = 'warning';
-        colorBg = 'bg-amber-500';
-        badgeStyle = 'bg-amber-100 text-amber-800 border-amber-200';
-        statusText = '建議下單';
-      }
-
-      return { 
-        currentPills, 
-        purchasedPills, 
-        totalCombinedPills, 
-        currentDays, 
-        purchasedDays, 
-        totalDays, 
-        currentFinishShort, 
-        totalFinishShort, 
-        status, 
-        colorBg, 
-        badgeStyle, 
-        statusText 
-      };
+    // ---------- page header ----------
+    function head(eyebrow, title) {
+      return `<header class="page-head">
+        <div><small>${eyebrow}</small><h1>${title}</h1></div>
+        <div class="head-actions">
+          <button class="sync" data-settings></button>
+          <button class="icon-btn" data-settings aria-label="設定">${icon.gear}</button>
+        </div>
+      </header>`;
     }
 
-    function switchTab(tabId) {
-      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-
-      const target = document.getElementById(tabId);
-      const btn = document.getElementById(`nav-${tabId}`);
-      if (target) target.classList.remove('hidden');
-      if (btn) btn.classList.add('active');
-
-      if (tabId === 'tab-inventory') {
-        renderGantt();
-        renderCards();
-      } else if (tabId === 'tab-checkin') {
-        renderCheckinView();
-      } else if (tabId === 'tab-reminder') {
-        renderReminderView();
-      } else if (tabId === 'tab-history') {
-        renderHistoryView();
-      }
+    function ring(frac, full) {
+      const r = 12, c = 2 * Math.PI * r;
+      if (full) return `<svg class="ring" viewBox="0 0 28 28" aria-hidden="true"><circle class="full" cx="14" cy="14" r="13"/><path class="tick" d="M9 14.5l3.2 3.2L19 11"/></svg>`;
+      return `<svg class="ring" viewBox="0 0 28 28" aria-hidden="true"><circle class="bgc" cx="14" cy="14" r="${r}"/><circle class="fgc" cx="14" cy="14" r="${r}" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - Math.min(1, frac))}"/></svg>`;
     }
 
-    function getTimelineScale(maxDays) {
-      const target = Math.max(Math.ceil(maxDays * 1.08), 60);
-      let maxTimeline;
-      let ticks = [];
-
-      if (target <= 90) {
-        maxTimeline = 90;
-        ticks = [0, 15, 30, 60, 90];
-      } else if (target <= 150) {
-        maxTimeline = 150;
-        ticks = [0, 30, 60, 90, 120, 150];
-      } else if (target <= 240) {
-        maxTimeline = 240;
-        ticks = [0, 30, 60, 120, 180, 240];
-      } else if (target <= 360) {
-        maxTimeline = 360;
-        ticks = [0, 30, 60, 120, 180, 240, 300, 360];
-      } else if (target <= 540) {
-        maxTimeline = 540;
-        ticks = [0, 30, 90, 180, 270, 360, 450, 540];
-      } else {
-        const step = 120;
-        maxTimeline = Math.ceil(target / step) * step;
-        ticks = [0, 30];
-        for (let d = step; d <= maxTimeline; d += step) {
-          if (!ticks.includes(d)) ticks.push(d);
-        }
-      }
-
-      if (!ticks.includes(30)) {
-        ticks.push(30);
-        ticks.sort((a, b) => a - b);
-      }
-
-      return { maxTimeline, ticks };
-    }
-
-    function setFilter(type) {
-      currentFilter = type;
-      ['all', 'need', 'safe'].forEach(f => {
-        const btn = document.getElementById(`filter-${f}`);
-        if (!btn) return;
-        if (f === type) {
-          btn.className = 'px-2 py-0.5 rounded font-medium bg-slate-800 text-white';
-        } else {
-          btn.className = 'px-2 py-0.5 rounded font-medium text-slate-600 hover:text-slate-900';
-        }
-      });
-      renderCards();
-    }
-
-    function highlightRow(itemId, isActive) {
-      const ganttRow = document.getElementById(`gantt-row-${itemId}`);
-      const cardRow = document.getElementById(`card-row-${itemId}`);
-      if (ganttRow) {
-        if (isActive) ganttRow.classList.add('bg-indigo-50/80', 'ring-1', 'ring-indigo-300');
-        else ganttRow.classList.remove('bg-indigo-50/80', 'ring-1', 'ring-indigo-300');
-      }
-      if (cardRow) {
-        if (isActive) cardRow.classList.add('ring-1', 'ring-indigo-400');
-        else cardRow.classList.remove('ring-1', 'ring-indigo-400');
-      }
-    }
-
-    function renderCards() {
-      const container = document.getElementById('cards-container');
-      if (!container) return;
-
-      let filteredItems = items.map((it, idx) => ({ ...it, originalIndex: idx }));
-      if (currentFilter === 'need') {
-        filteredItems = filteredItems.filter(it => {
-          const s = calculateStats(it).status;
-          return s === 'danger' || s === 'empty' || s === 'warning';
-        });
-      } else if (currentFilter === 'safe') {
-        filteredItems = filteredItems.filter(it => calculateStats(it).status === 'safe');
-      }
-
-      if (filteredItems.length === 0) {
-        container.innerHTML = `<div class="p-8 text-center text-slate-400 text-xs bg-white rounded-xl border border-slate-200">此篩選條件下無品項</div>`;
-        return;
-      }
-
-      const today = getTodayKey();
-      const todayChecks = checkinRecords[today] || {};
-
-      container.innerHTML = filteredItems.map(item => {
-        const index = item.originalIndex;
-        const stats = calculateStats(item);
-        const isCheckedToday = !!todayChecks[item.id];
-
-        const slotBadgeMap = {
-          morning: '<span class="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.5 rounded font-medium">晨間空腹</span>',
-          lunch: '<span class="bg-blue-100 text-blue-800 text-[10px] px-1.5 py-0.5 rounded font-medium">午間隨餐</span>',
-          dinner: '<span class="bg-orange-100 text-orange-800 text-[10px] px-1.5 py-0.5 rounded font-medium">晚間隨餐</span>',
-          bedtime: '<span class="bg-indigo-100 text-indigo-800 text-[10px] px-1.5 py-0.5 rounded font-medium">睡前放鬆</span>'
-        };
-
-        return `
-          <div 
-            id="card-row-${item.id}"
-            onmouseenter="highlightRow(${item.id}, true)"
-            onmouseleave="highlightRow(${item.id}, false)"
-            class="item-card-hover bg-white rounded-xl p-3 border border-slate-200 shadow-xs transition"
-          >
-            <div class="flex items-start justify-between gap-2 mb-1.5">
-              <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-1.5 flex-wrap">
-                  <h3 class="font-bold text-xs sm:text-sm text-slate-900 truncate" title="${item.name}">${item.name}</h3>
-                  ${slotBadgeMap[item.slot || 'lunch'] || ''}
-                  ${item.url ? `<a href="${item.url}" target="_blank" class="text-slate-400 hover:text-emerald-600 text-[11px]"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>` : ''}
-                </div>
-                <div class="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
-                  <span>單罐 ${item.capacity} 顆</span>
-                  <span>·</span>
-                  <span>每日 ${item.daily} 顆</span>
-                  <span>·</span>
-                  <span class="text-slate-700 font-semibold">現有 ${stats.currentPills} 顆</span>
-                </div>
-              </div>
-
-              <span class="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-md border ${stats.badgeStyle}">
-                現貨 ${stats.currentDays}天 (${stats.statusText})
-              </span>
-            </div>
-
-            <!-- 控制列：3 欄排版 -->
-            <div class="grid grid-cols-12 gap-1.5 items-center bg-slate-50/90 p-1.5 rounded-lg border border-slate-100 text-xs">
-              
-              <!-- 1. 現有整罐 -->
-              <div class="col-span-4 bg-white p-1 rounded-md border border-slate-200 shadow-xs">
-                <div class="flex items-center justify-between text-[9px] text-slate-500 mb-0.5">
-                  <span>未拆罐</span>
-                  <span class="text-slate-400">&times;${item.capacity}</span>
-                </div>
-                <div class="flex items-center justify-between">
-                  <button onclick="changeBottles(${index}, -1)" class="w-5 h-5 flex items-center justify-center font-bold text-slate-600 hover:bg-slate-100 rounded text-xs active:scale-95">-</button>
-                  <input 
-                    type="number" 
-                    min="0" 
-                    value="${item.bottles || 0}" 
-                    oninput="setBottles(${index}, this.value)"
-                    class="w-7 text-center font-bold text-xs text-slate-800 bg-transparent focus:outline-none"
-                  />
-                  <button onclick="changeBottles(${index}, 1)" class="w-5 h-5 flex items-center justify-center font-bold text-slate-600 hover:bg-slate-100 rounded text-xs active:scale-95">+</button>
-                </div>
-              </div>
-
-              <!-- 2. 開封散裝 -->
-              <div class="col-span-4 bg-white p-1 rounded-md border border-slate-200 shadow-xs">
-                <div class="flex items-center justify-between text-[9px] text-slate-500 mb-0.5">
-                  <span>開封散裝</span>
-                  <span class="text-slate-400">顆</span>
-                </div>
-                <div class="flex items-center justify-between">
-                  <button onclick="changeLoose(${index}, -1)" class="w-5 h-5 flex items-center justify-center font-bold text-slate-600 hover:bg-slate-100 rounded text-xs active:scale-95">-</button>
-                  <input 
-                    type="number" 
-                    min="0" 
-                    value="${item.loose || 0}" 
-                    oninput="setLoose(${index}, this.value)"
-                    class="w-7 text-center font-bold text-xs text-slate-800 bg-transparent focus:outline-none"
-                  />
-                  <button onclick="changeLoose(${index}, 1)" class="w-5 h-5 flex items-center justify-center font-bold text-slate-600 hover:bg-slate-100 rounded text-xs active:scale-95">+</button>
-                </div>
-              </div>
-
-              <!-- 3. 預計採購罐數 -->
-              <div class="col-span-4 bg-indigo-50/80 p-1 rounded-md border border-indigo-200 shadow-xs">
-                <div class="flex items-center justify-between text-[9px] text-indigo-800 mb-0.5 font-semibold">
-                  <span>預計採購</span>
-                  <span class="text-indigo-400">罐</span>
-                </div>
-                <div class="flex items-center justify-between bg-white rounded border border-indigo-200">
-                  <button onclick="changePurchased(${index}, -1)" class="w-5 h-5 flex items-center justify-center font-bold text-indigo-700 hover:bg-indigo-50 rounded text-xs active:scale-95">-</button>
-                  <input 
-                    type="number" 
-                    min="0" 
-                    value="${item.purchased || 0}" 
-                    oninput="setPurchased(${index}, this.value)"
-                    class="w-7 text-center font-bold text-xs text-indigo-950 bg-transparent focus:outline-none"
-                  />
-                  <button onclick="changePurchased(${index}, 1)" class="w-5 h-5 flex items-center justify-center font-bold text-indigo-700 hover:bg-indigo-50 rounded text-xs active:scale-95">+</button>
-                </div>
-              </div>
-
-            </div>
-
-            <!-- 卡片底端快速操作 -->
-            <div class="flex items-center justify-between mt-1.5 pt-1.5 border-t border-slate-100">
-              <div class="flex items-center gap-1.5">
-                <button onclick="toggleCheckin(${item.id})" class="${isCheckedToday ? 'bg-emerald-600 text-white' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200'} text-[10px] font-bold px-2 py-1 rounded-md transition active:scale-95 flex items-center gap-1">
-                  <i class="fa-solid ${isCheckedToday ? 'fa-check-circle' : 'fa-check'} text-[9px]"></i>
-                  <span>${isCheckedToday ? '今日已打卡' : `吃 ${item.daily} 顆打卡`}</span>
-                </button>
-                ${item.purchased > 0 ? `
-                  <button onclick="receivePurchased(${index})" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-[10px] px-2 py-1 rounded-md transition active:scale-95 shadow-xs">
-                    到貨 (+${item.purchased}罐)
-                  </button>
-                ` : ''}
-              </div>
-
-              <button onclick="deleteItem(${index})" class="text-slate-300 hover:text-rose-500 text-xs p-1 transition" title="刪除品項">
-                <i class="fa-solid fa-trash-can"></i>
-              </button>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function renderGantt() {
-      const container = document.getElementById('gantt-rows');
-      const ticksContainer = document.getElementById('gantt-ticks');
-      const scaleIndicator = document.getElementById('gantt-scale-indicator');
-      if (!container || !ticksContainer) return;
-
-      const sorted = [...items].sort((a, b) => {
-        const da = calculateStats(a).currentDays;
-        const db = calculateStats(b).currentDays;
-        return da - db;
-      });
-
-      const maxItemDays = Math.max(...items.map(it => calculateStats(it).totalDays), 0);
-      const { maxTimeline: MAX_TIMELINE_DAYS, ticks: tickDays } = getTimelineScale(maxItemDays);
-
-      if (scaleIndicator) {
-        scaleIndicator.textContent = `最高 ${maxItemDays} 天 / 軸長 ${MAX_TIMELINE_DAYS} 天`;
-      }
-
-      ticksContainer.innerHTML = tickDays.map(d => {
-        const pct = ((d / MAX_TIMELINE_DAYS) * 100).toFixed(2);
-        const label = d === 0 ? '今天' : (d === 30 ? '30天' : `${d}天`);
-        const isAmber = d === 30;
-
-        let transformClass = '-translate-x-1/2';
-        if (d === 0) transformClass = 'translate-x-0';
-        else if (d === MAX_TIMELINE_DAYS) transformClass = '-translate-x-full';
-
-        return `
-          <span 
-            class="absolute top-0 ${transformClass} whitespace-nowrap ${isAmber ? 'text-amber-600 font-bold' : 'text-slate-400'}" 
-            style="left: ${pct}%;"
-          >
-            ${label}
-          </span>
-        `;
-      }).join('');
-
-      container.innerHTML = sorted.map(item => {
-        const stats = calculateStats(item);
-        const currentPct = ((stats.currentDays / MAX_TIMELINE_DAYS) * 100);
-        const purchasedPct = ((stats.purchasedDays / MAX_TIMELINE_DAYS) * 100);
-
-        const gridLinesHtml = tickDays.map(d => {
-          const pct = ((d / MAX_TIMELINE_DAYS) * 100).toFixed(2);
-          const isAmber = d === 30;
-          return `
-            <div 
-              class="absolute top-0 bottom-0 w-px border-l ${isAmber ? 'border-amber-300 border-dashed z-10' : 'border-slate-200 border-dashed z-0'} pointer-events-none" 
-              style="left: ${pct}%;"
-            ></div>
-          `;
-        }).join('');
-
-        return `
-          <div 
-            id="gantt-row-${item.id}"
-            onmouseenter="highlightRow(${item.id}, true)"
-            onmouseleave="highlightRow(${item.id}, false)"
-            class="grid grid-cols-12 items-center py-2 px-1.5 transition rounded-lg"
-          >
-            <div class="col-span-3 pr-2 flex flex-col justify-center min-w-0">
-              <span class="font-bold text-[11px] text-slate-800 truncate" title="${item.name}">${item.name}</span>
-              <span class="text-[10px] text-slate-400 truncate">
-                現貨至 ${stats.currentDays > 0 ? stats.currentFinishShort : '<b class="text-rose-500">已斷</b>'}
-                ${stats.purchasedDays > 0 ? `<b class="text-indigo-600"> 延至 ${stats.totalFinishShort}</b>` : ''}
-              </span>
-            </div>
-
-            <div class="col-span-9 flex items-center gap-1.5">
-              <div class="relative flex-1 h-6 bg-slate-100 rounded-md flex items-center px-0.5 overflow-hidden">
-                ${gridLinesHtml}
-
-                <div class="relative z-20 flex items-center h-5 w-full">
-                  ${stats.currentDays > 0 ? `
-                    <div 
-                      class="${stats.colorBg} h-5 rounded-l ${stats.purchasedDays > 0 ? '' : 'rounded-r'} flex items-center justify-center px-1.5 text-[10px] font-bold text-white shadow-xs transition-all duration-200 shrink-0 select-none" 
-                      style="width: ${Math.max(currentPct, 0)}%; min-width: 28px;"
-                      title="${item.name} 現有：${stats.currentDays} 天"
-                    >
-                      ${stats.currentDays}d
-                    </div>
-                  ` : ''}
-
-                  ${stats.purchasedDays > 0 ? `
-                    <div 
-                      class="bg-indigo-500 bg-striped-pattern border-y border-r border-indigo-400/50 h-5 ${stats.currentDays > 0 ? 'rounded-r' : 'rounded'} flex items-center justify-center px-1.5 text-[10px] font-bold text-white shadow-xs transition-all duration-200 shrink-0 select-none" 
-                      style="width: ${Math.max(purchasedPct, 0)}%; min-width: 28px;"
-                      title="${item.name} 採購延長：+${stats.purchasedDays} 天"
-                    >
-                      +${stats.purchasedDays}d
-                    </div>
-                  ` : ''}
-
-                  ${stats.totalDays === 0 ? `
-                    <span class="text-[9px] font-bold text-rose-500 pl-1 select-none flex items-center gap-1">
-                      <span class="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block animate-pulse"></span>已斷貨
-                    </span>
-                  ` : ''}
-                </div>
-              </div>
-
-              <div class="w-20 shrink-0 text-right pr-0.5">
-                <span class="text-xs font-bold text-slate-800">
-                  ${stats.totalDays}天
-                </span>
-                <span class="text-[10px] text-slate-400 block -mt-0.5">
-                  ${stats.currentPills}${stats.purchasedPills > 0 ? `<b class="text-indigo-600 font-normal">+${stats.purchasedPills}</b>` : ''}顆
-                </span>
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
+    // ---------- 今天 ----------
     function renderCheckinView() {
-      const container = document.getElementById('time-slots-container');
-      const todayBadge = document.getElementById('today-date-badge');
-      if (!container) return;
+      const todayKey = getTodayKey();
+      const vKey = viewDay || todayKey;
+      const isToday = vKey === todayKey;
+      const today = startOfToday();
+      const monday = new Date(today); monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+      const week = Array.from({ length: 7 }, (_, i) => { const d = new Date(monday); d.setDate(monday.getDate() + i); return d; });
+      const vd = fromKey(vKey);
+      const day = checkinRecords[vKey] || {};
+      const done = items.filter(it => day[it.id]).length;
+      const cur = currentSlot();
 
-      const today = getTodayKey();
-      const d = new Date();
-      const weekDays = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
-      if (todayBadge) {
-        todayBadge.textContent = `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} (${weekDays[d.getDay()]})`;
-      }
+      $('#screen-checkin').innerHTML = `
+        ${head(isToday ? '今天' : `${vd.getMonth() + 1} 月 ${vd.getDate()} 日（${WEEK[vd.getDay()]}）`, isToday ? `${today.getMonth() + 1} 月 ${today.getDate()} 日` : '過去紀錄')}
+        <div class="week" role="group" aria-label="這一週">
+          ${week.map(d => {
+            const k = keyOf(d), future = d > today, n = dayDone(k);
+            return `<button class="wday ${k === vKey ? 'sel' : ''} ${future ? 'future' : ''}" ${future ? 'disabled' : `data-view="${k}"`} aria-label="${d.getMonth() + 1}月${d.getDate()}日，吃了 ${n} / ${items.length} 款" ${k === vKey ? 'aria-current="date"' : ''}>
+              <span>${WEEK[d.getDay()]}</span>${future || !items.length ? ring(0) : ring(n / items.length, n >= items.length)}<b>${d.getDate()}</b>
+            </button>`;
+          }).join('')}
+        </div>
+        ${items.length ? `
+        <div class="card day-sum">
+          <p>${isToday ? '今天進度' : '那天吃了'}<span>${isToday ? '點卡片打卡，點「顆」改這次份量' : '過去的日子目前只能查看'}</span></p>
+          <div class="big">${done}<small> / ${items.length}</small></div>
+        </div>
+        ${isToday && done === items.length ? `<div class="all-done">${icon.check}今天的都吃完了</div>` : ''}
+        ${isToday && done > 0 && done < items.length ? '' : ''}
+        ${SLOT_ORDER.map(slot => {
+          const list = items.filter(it => slotOf(it) === slot);
+          if (!list.length) return '';
+          const slotDone = list.filter(it => day[it.id]).length;
+          return `<div class="slot-label"><h2>${SLOTS[slot].name}</h2><span class="t">${esc(reminderTimes[slot] || '')}</span>${isToday && slot === cur ? '<span class="now-tag">現在</span>' : ''}<span class="n">${slotDone}/${list.length}</span></div>
+            <div class="dose-list" id="slot-${slot}">
+            ${list.map(it => {
+              const rec = day[it.id];
+              const qty = rec ? (rec.daily || doseOf(it)) : doseOf(it);
+              const dis = isToday ? '' : 'disabled';
+              return `<div class="card dose-card ${rec ? 'done' : ''} ${justChecked === String(it.id) ? 'pop' : ''}">
+                <button class="dose-main" ${dis} data-check="${esc(it.id)}" aria-pressed="${!!rec}">
+                  ${pill(it)}
+                  <span class="txt"><b>${esc(shortName(it.name))}</b><span class="sub">${rec ? `${esc(rec.time || '')} 已吃` : esc(it.notes || '')}</span></span>
+                </button>
+                <button class="qty" ${dis} data-dose="${esc(it.id)}" aria-label="這次吃 ${qty} 顆，點擊調整"><b>${qty}</b>顆</button>
+                <button class="check" ${dis} data-check="${esc(it.id)}" aria-label="${rec ? '取消打卡' : '打卡'}：${esc(shortName(it.name))}"><i>${icon.check}</i></button>
+              </div>`;
+            }).join('')}
+            </div>
+            ${isToday && slotDone < list.length ? `<button class="btn soft small slot-all" data-slot-all="${slot}">${SLOTS[slot].name}全部打卡</button>` : ''}`;
+        }).join('')}` : `<div class="card empty">還沒有任何保健品，到「庫存」按右下角 ＋ 新增</div>`}`;
+    }
 
-      const todayChecks = checkinRecords[today] || {};
-      const slotsConfig = [
-        { id: 'morning', title: '晨間 / 空腹時段', icon: 'fa-sun', color: 'amber', subtitle: '醒腦提神 · 運動前補充' },
-        { id: 'lunch', title: '午間隨餐時段', icon: 'fa-utensils', color: 'blue', subtitle: '脂溶性成分隨油脂吸收佳' },
-        { id: 'dinner', title: '晚間隨餐時段', icon: 'fa-cloud-sun', color: 'orange', subtitle: '正餐飯後服用 · 溫和持久' },
-        { id: 'bedtime', title: '睡前 / 放鬆時段', icon: 'fa-moon', color: 'indigo', subtitle: '舒緩日常壓力 · 幫助睡眠' }
-      ];
+    function doToggle(id) {
+      const key = getTodayKey();
+      if (!checkinRecords[key]) checkinRecords[key] = {};
+      const it = findItem(id); if (!it) return null;
+      const rec = checkinRecords[key][it.id];
+      if (rec) { applyPills(it, rec.daily || doseOf(it)); delete checkinRecords[key][it.id]; return false; }
+      checkinRecords[key][it.id] = { time: nowHM(), daily: doseOf(it) };
+      applyPills(it, -doseOf(it));
+      return true;
+    }
 
-      container.innerHTML = slotsConfig.map(slot => {
-        const slotItems = items.filter(it => (it.slot || 'lunch') === slot.id);
-        const totalInSlot = slotItems.length;
-        const checkedInSlot = slotItems.filter(it => !!todayChecks[it.id]).length;
-        const allCompleted = totalInSlot > 0 && checkedInSlot === totalInSlot;
+    // ---------- 庫存 ----------
+    let currentFilterV4 = 'all';
+    function renderInventoryView() {
+      const all = items.map(it => ({ it, s: stats(it) }));
+      const need = all.filter(({ s }) => s.status !== 'ok').sort((a, b) => a.s.orderIn - b.s.orderIn);
+      const urgent = all.filter(({ s }) => s.status === 'danger' || s.status === 'empty').length;
+      const badge = $('#invBadge'); badge.textContent = urgent || ''; badge.hidden = !urgent;
+      const shown = all.filter(({ s }) => currentFilterV4 === 'all' || (currentFilterV4 === 'need' ? s.status !== 'ok' : s.status === 'ok')).sort((a, b) => a.s.days - b.s.days);
+      const SCALE = 180;
 
-        return `
-          <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs flex flex-col justify-between">
-            <div>
-              <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
-                <div class="flex items-center gap-2">
-                  <div class="w-8 h-8 rounded-lg bg-${slot.color}-100 text-${slot.color}-600 flex items-center justify-center text-sm">
-                    <i class="fa-solid ${slot.icon}"></i>
-                  </div>
-                  <div>
-                    <h3 class="font-bold text-xs text-slate-800">${slot.title}</h3>
-                    <p class="text-[10px] text-slate-400">${slot.subtitle}</p>
-                  </div>
-                </div>
-                <span class="text-[10px] font-bold ${allCompleted ? 'text-emerald-600 bg-emerald-50' : 'text-slate-500 bg-slate-100'} px-2 py-0.5 rounded-full">
-                  ${checkedInSlot} / ${totalInSlot}
+      $('#screen-inventory').innerHTML = `
+        ${head(`${items.length} 款保健品`, '庫存')}
+        ${need.length ? `<div class="card alert">
+          <div class="alert-top"><span class="ic">${icon.alert}</span><b>${need.length} 款該補貨了</b></div>
+          <ul>${need.map(({ it, s }) => `<li><span>${esc(shortName(it.name))}</span><span>${it.purchased > 0 ? `已訂 ${it.purchased} 罐，等到貨` : s.orderIn <= 0 ? '<span class="late">今天就該下單</span>' : `<em>${s.orderBy}</em> 前下單`}</span></li>`).join('')}</ul>
+          <div class="alert-foot"><span>以寄送約 ${leadDays} 天計算</span><button class="btn soft small" data-open-shop>${icon.cart}購物清單</button></div>
+        </div>` : items.length ? `<div class="card alert calm"><div class="alert-top"><span class="ic">${icon.ok}</span><b>庫存都還夠 30 天以上</b></div></div>` : ''}
+        <div class="segmented" role="group" aria-label="篩選">
+          <button data-filter="all" aria-pressed="${currentFilterV4 === 'all'}">全部</button>
+          <button data-filter="need" aria-pressed="${currentFilterV4 === 'need'}">需補貨 ${need.length}</button>
+          <button data-filter="ok" aria-pressed="${currentFilterV4 === 'ok'}">充足</button>
+        </div>
+        <div class="inv-list">
+          ${shown.map(({ it, s }) => {
+            const curW = Math.min(100, s.days / SCALE * 100);
+            const buyW = Math.min(100 - curW, s.buyDays / SCALE * 100);
+            const open = String(openItem) === String(it.id);
+            const id = esc(it.id);
+            return `<div class="card">
+              <button class="inv-head" data-open="${id}" aria-expanded="${open}">
+                ${pill(it)}
+                <span class="inv-name">${esc(shortName(it.name))}</span>
+                <span class="inv-days ${s.status}"><b>${s.days > SCALE ? SCALE + '+' : s.days}</b><small>天</small></span>
+                <span class="inv-sub">${s.status !== 'ok' ? `<span class="st ${s.status}">${s.label}</span> · ` : ''}${s.days > 0 ? `約 ${s.end} 吃完` : '現在沒有庫存'}${s.buyDays > 0 ? ` · 已訂 +${s.buyDays} 天` : ''}</span>
+                <span class="bar" aria-hidden="true">
+                  <span class="cur ${s.status}" style="width:${curW}%"></span>
+                  ${buyW > 0 ? `<span class="buy" style="left:${curW}%;width:${buyW}%"></span>` : ''}
+                  <span class="line30" style="left:${30 / SCALE * 100}%"></span>
                 </span>
-              </div>
+              </button>
+              ${open ? `<div class="inv-body">
+                <p class="note-line">${esc(brandOf(it.name))}${brandOf(it.name) ? ' · ' : ''}現有 ${s.cur} 顆 · 一罐 ${esc(it.capacity)} 顆</p>
+                <div class="choice three" role="group" aria-label="劑型">${Object.keys(FORMS).map(f => `<button type="button" data-setform="${id}:${f}" aria-pressed="${formOf(it) === f}">${FORMS[f]}</button>`).join('')}</div>
+                ${stepper(it, 'daily', '每次吃', '顆，打卡預設扣這麼多')}
+                ${stepper(it, 'bottles', '未拆整罐', `一罐 ${esc(it.capacity)} 顆`)}
+                ${stepper(it, 'loose', '開封散裝', '顆')}
+                ${stepper(it, 'purchased', '預計採購', '罐，還沒到貨', true)}
+                ${it.notes ? `<p class="note-line">服用提示：${esc(it.notes)}</p>` : ''}
+                <div class="actions">
+                  ${it.purchased > 0 ? `<button class="btn buy" data-receive="${id}">${icon.inbox}到貨入庫 ${esc(it.purchased)} 罐</button>` : ''}
+                  ${/^https?:\/\//.test(it.url || '') ? `<a class="btn" href="${esc(it.url)}" target="_blank" rel="noopener">${icon.ext}購買頁面</a>` : ''}
+                  <button class="btn ${String(pendingDelete) === String(it.id) ? 'confirm' : 'ghost-danger'}" data-delete="${id}">${icon.trash}${String(pendingDelete) === String(it.id) ? '再按一次確認刪除' : '刪除'}</button>
+                </div>
+              </div>` : ''}
+            </div>`;
+          }).join('') || `<div class="card empty">${items.length ? '這個分類目前沒有品項' : '還沒有任何保健品，按右下角 ＋ 新增'}</div>`}
+        </div>`;
+    }
 
-              <div class="space-y-2">
-                ${slotItems.map(it => {
-                  const isChecked = !!todayChecks[it.id];
-                  const stats = calculateStats(it);
-                  return `
-                    <div class="p-2 rounded-xl border ${isChecked ? 'bg-emerald-50/50 border-emerald-200' : 'bg-slate-50 border-slate-200/80'} flex items-center justify-between gap-2 transition">
-                      <div class="min-w-0 flex-1">
-                        <div class="flex items-center gap-1.5">
-                          <h4 class="font-bold text-xs text-slate-800 truncate" title="${it.name}">${it.name}</h4>
-                          ${stats.currentDays <= 0 ? '<span class="text-[9px] bg-rose-100 text-rose-700 px-1 rounded">斷貨</span>' : ''}
-                        </div>
-                        <div class="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5">
-                          <span class="font-semibold text-slate-600">吃 ${it.daily} 顆</span>
-                          <span>·</span>
-                          <span class="truncate" title="${it.notes || ''}">${it.notes || '隨水服用'}</span>
-                        </div>
-                      </div>
+    function stepper(it, field, label, sub, buy = false) {
+      const id = esc(it.id);
+      return `<div class="row">
+        <label for="st-${id}-${field}">${label}<small>${sub}</small></label>
+        <div class="stepper ${buy ? 'buy' : ''}">
+          <button type="button" data-step="${id}:${field}:-1" aria-label="${label}減一">−</button>
+          <input type="number" inputmode="numeric" id="st-${id}-${field}" value="${esc(it[field] ?? 0)}" data-set="${id}:${field}" min="0">
+          <button type="button" data-step="${id}:${field}:1" aria-label="${label}加一">＋</button>
+        </div>
+      </div>`;
+    }
 
-                      <button 
-                        onclick="toggleCheckin(${it.id})"
-                        class="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition active:scale-95 ${isChecked ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white border border-slate-200 text-slate-400 hover:border-emerald-500 hover:text-emerald-600'}"
-                        title="${isChecked ? '已完成，點擊取消' : '點擊打卡'}"
-                      >
-                        <i class="fa-solid ${isChecked ? 'fa-check' : 'fa-plus'} text-xs"></i>
-                      </button>
-                    </div>
-                  `;
-                }).join('')}
-                ${slotItems.length === 0 ? '<div class="text-[11px] text-slate-400 text-center py-6">此時段尚無品項</div>' : ''}
+    // ---------- 購物清單 ----------
+    function renderShop() {
+      const list = items.map(it => ({ it, s: stats(it) })).filter(({ s }) => s.status !== 'ok').sort((a, b) => a.s.orderIn - b.s.orderIn);
+      const toBuy = list.filter(({ it }) => !(it.purchased > 0));
+      const waiting = list.filter(({ it }) => it.purchased > 0);
+      toBuy.forEach(({ it }) => { if (shopQty[it.id] === undefined) shopQty[it.id] = suggestQty(it); });
+      $('#shopBody').innerHTML = `
+        <p class="note-line">依寄送約 ${leadDays} 天計算最晚下單日，可在設定調整。</p>
+        ${toBuy.length ? '<h3>要買的（依下單期限排序）</h3>' + toBuy.map(({ it, s }) => `
+          <div class="shop-item">
+            <div class="shop-top">${pill(it)}<div class="txt"><b>${esc(shortName(it.name))}</b><span class="sub ${s.orderIn <= 0 ? 'late' : ''}">${s.orderIn <= 0 ? '今天就該下單' : s.orderBy + ' 前下單'} · 剩 ${s.days} 天</span></div></div>
+            <div class="row"><span class="muted">建議買到夠吃 90 天</span>
+              <div class="stepper buy">
+                <button type="button" data-qty="${esc(it.id)}:-1" aria-label="少買一罐">−</button>
+                <input type="number" inputmode="numeric" value="${shopQty[it.id]}" data-qtyset="${esc(it.id)}" aria-label="購買罐數">
+                <button type="button" data-qty="${esc(it.id)}:1" aria-label="多買一罐">＋</button>
               </div>
             </div>
-
-            ${slotItems.length > 0 ? `
-              <div class="mt-4 pt-3 border-t border-slate-100">
-                <button 
-                  onclick="checkinSlot('${slot.id}')"
-                  class="w-full py-1.5 rounded-xl font-bold text-xs transition active:scale-95 ${allCompleted ? 'bg-slate-100 text-slate-500 hover:bg-slate-200' : 'bg-slate-900 text-white hover:bg-black shadow-xs'}"
-                >
-                  ${allCompleted ? '已全數完成' : '此時段一鍵全打卡'}
-                </button>
-              </div>
-            ` : ''}
-          </div>
-        `;
-      }).join('');
-
-      updateTodayProgress();
+            ${/^https?:\/\//.test(it.url || '') ? `<a class="btn" href="${esc(it.url)}" target="_blank" rel="noopener">${icon.ext}開啟購買頁面</a>` : ''}
+          </div>`).join('') + '<button class="btn primary" data-mark-ordered>全部標記為已下單</button>' : '<p class="note-line">目前沒有需要下單的品項</p>'}
+        ${waiting.length ? '<h3>已下單，等到貨</h3>' + waiting.map(({ it }) => `
+          <div class="shop-item">
+            <div class="shop-top">${pill(it)}<div class="txt"><b>${esc(shortName(it.name))}</b><span class="sub">${esc(it.purchased)} 罐</span></div></div>
+            <button class="btn buy" data-receive="${esc(it.id)}">${icon.inbox}到貨了，轉入庫存</button>
+          </div>`).join('') : ''}`;
     }
 
-    function toggleCheckin(itemId) {
-      const today = getTodayKey();
-      if (!checkinRecords[today]) checkinRecords[today] = {};
-
-      const item = items.find(it => it.id === itemId);
-      if (!item) return;
-
-      const isChecked = !!checkinRecords[today][itemId];
-      const daily = Number(item.daily) || 1;
-      let totalPills = (item.bottles * item.capacity) + item.loose;
-
-      if (!isChecked) {
-        if (totalPills > 0) {
-          totalPills = Math.max(0, totalPills - daily);
-          item.bottles = Math.floor(totalPills / item.capacity);
-          item.loose = totalPills % item.capacity;
-        }
-        checkinRecords[today][itemId] = { time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }), daily };
-        showToast(`已完成「${item.name}」打卡（扣除 ${daily} 顆）`);
-      } else {
-        totalPills += daily;
-        item.bottles = Math.floor(totalPills / item.capacity);
-        item.loose = totalPills % item.capacity;
-        delete checkinRecords[today][itemId];
-        showToast(`已取消「${item.name}」今日打卡（加回 ${daily} 顆）`);
-      }
-
-      triggerCloudSync();
-      renderAll();
-    }
-
-    function checkinSlot(slotId) {
-      const today = getTodayKey();
-      if (!checkinRecords[today]) checkinRecords[today] = {};
-
-      const slotItems = items.filter(it => (it.slot || 'lunch') === slotId);
-      let count = 0;
-
-      slotItems.forEach(it => {
-        if (!checkinRecords[today][it.id]) {
-          const daily = Number(it.daily) || 1;
-          let total = (it.bottles * it.capacity) + it.loose;
-          if (total > 0) {
-            total = Math.max(0, total - daily);
-            it.bottles = Math.floor(total / it.capacity);
-            it.loose = total % it.capacity;
-          }
-          checkinRecords[today][it.id] = { time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }), daily };
-          count++;
-        }
-      });
-
-      triggerCloudSync();
-      renderAll();
-      showToast(`已為該時段完成 ${count} 款打卡！`);
-    }
-
-    function consumeAllToday() {
-      const today = getTodayKey();
-      if (!checkinRecords[today]) checkinRecords[today] = {};
-
-      let count = 0;
-      items.forEach(it => {
-        if (!checkinRecords[today][it.id]) {
-          const daily = Number(it.daily) || 1;
-          let total = (it.bottles * it.capacity) + it.loose;
-          if (total > 0) {
-            total = Math.max(0, total - daily);
-            it.bottles = Math.floor(total / it.capacity);
-            it.loose = total % it.capacity;
-          }
-          checkinRecords[today][it.id] = { time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }), daily };
-          count++;
-        }
-      });
-
-      triggerCloudSync();
-      renderAll();
-      showToast(`一鍵全打卡完成！已為 ${count} 款未服用品項扣除今日份量`);
-    }
-
-    function updateTodayProgress() {
-      const today = getTodayKey();
-      const todayChecks = checkinRecords[today] || {};
-      const total = items.length;
-      const checked = items.filter(it => !!todayChecks[it.id]).length;
-      const pct = total > 0 ? Math.round((checked / total) * 100) : 0;
-
-      const rateText = document.getElementById('today-rate-text');
-      const rateBar = document.getElementById('today-rate-bar');
-      const statProg = document.getElementById('stat-today-progress');
-      const navBadge = document.getElementById('nav-checkin-badge');
-
-      if (rateText) rateText.textContent = `${pct}% (${checked}/${total})`;
-      if (rateBar) rateBar.style.width = `${pct}%`;
-      if (statProg) statProg.textContent = `${checked} / ${total} 款 (${pct}%)`;
-
-      if (navBadge) {
-        navBadge.textContent = `${checked}/${total}`;
-        navBadge.classList.remove('hidden');
-      }
-    }
-
+    // ---------- 提醒 ----------
+    const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+    const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
     function renderReminderView() {
-      document.getElementById('reminder-time-morning').value = reminderTimes.morning;
-      document.getElementById('reminder-time-lunch').value = reminderTimes.lunch;
-      document.getElementById('reminder-time-dinner').value = reminderTimes.dinner;
-      document.getElementById('reminder-time-bedtime').value = reminderTimes.bedtime;
-
-      const tbody = document.getElementById('timing-guide-tbody');
-      if (!tbody) return;
-
-      const slotNameMap = {
-        morning: '<span class="text-amber-700 font-bold">晨間 / 空腹</span>',
-        lunch: '<span class="text-blue-700 font-bold">午間隨餐</span>',
-        dinner: '<span class="text-orange-700 font-bold">晚間隨餐</span>',
-        bedtime: '<span class="text-indigo-700 font-bold">睡前放鬆</span>'
-      };
-
-      tbody.innerHTML = items.map(it => `
-        <tr class="hover:bg-slate-50 transition">
-          <td class="py-2.5 px-3 font-semibold text-slate-800">${it.name}</td>
-          <td class="py-2.5 px-3">${slotNameMap[it.slot || 'lunch']}</td>
-          <td class="py-2.5 px-3 font-medium text-slate-600">每日 ${it.daily} 顆</td>
-          <td class="py-2.5 px-3 text-slate-500 text-[10px]">${it.notes || '隨開水吞服'}</td>
-        </tr>
-      `).join('');
-
-      updateNotifyButtonStatus();
+      const perm = typeof Notification === 'undefined' ? 'unsupported' : Notification.permission;
+      const permText = { granted: '已開啟，時間到會跳出通知', denied: '已被封鎖，請到系統設定開啟', default: '時間到跳出通知', unsupported: '這個瀏覽器不支援通知，只會播放提示音' }[perm];
+      $('#screen-reminder').innerHTML = `
+        ${head('每天', '提醒')}
+        <div class="card switch-card">
+          <div style="flex:1"><b>推播提醒</b><span>${permText}</span></div>
+          <button class="switch" role="switch" data-notify aria-checked="${perm === 'granted'}" aria-label="推播提醒"></button>
+        </div>
+        ${isIOS && !isStandalone() ? '<p class="tip-box">iPhone 要先用 Safari「分享 → 加入主畫面」，從主畫面打開才收得到通知。</p>' : ''}
+        <p class="note-line">提醒只會在 App 開著（或在背景剛切出去）時響；完全關掉 App 不會通知。</p>
+        ${SLOT_ORDER.map(slot => {
+          const list = items.filter(it => slotOf(it) === slot);
+          return `<div class="card rem">
+            <div class="rem-top">${icon.clock}<input type="time" value="${esc(reminderTimes[slot] || '')}" data-time="${slot}" aria-label="${SLOTS[slot].name}提醒時間"><span class="when">${SLOTS[slot].name} · 每天</span></div>
+            ${list.length ? `<div class="rem-items">${list.map(it => `<span class="chip">${pill(it)}${esc(shortName(it.name).replace(/\s*\(.*$/, ''))}</span>`).join('')}</div>` : ''}
+          </div>`;
+        }).join('')}
+        <button class="btn" data-test-sound>${icon.bell}試聽提醒音</button>
+        ${items.length ? `<div class="label"><h2>最佳吸收時段</h2></div>
+        <div class="card tips">
+          ${SLOT_ORDER.flatMap(slot => items.filter(it => slotOf(it) === slot)).map(it => `
+            <div class="tip">${pill(it)}<div class="txt"><b>${esc(shortName(it.name))}</b><p>${SLOTS[slotOf(it)].name} · ${doseOf(it)} 顆${it.notes ? ' · ' + esc(it.notes) : ''}</p></div></div>`).join('')}
+        </div>` : ''}`;
     }
 
-    function saveReminderTimes() {
-      reminderTimes.morning = document.getElementById('reminder-time-morning').value;
-      reminderTimes.lunch = document.getElementById('reminder-time-lunch').value;
-      reminderTimes.dinner = document.getElementById('reminder-time-dinner').value;
-      reminderTimes.bedtime = document.getElementById('reminder-time-bedtime').value;
-      localStorage.setItem(STORAGE_KEY_REMINDERS, JSON.stringify(reminderTimes));
-      triggerCloudSync();
-      showToast('提醒時間已儲存！');
-    }
-
-    function updateNotifyButtonStatus() {
-      const btn = document.getElementById('notify-status-text');
-      if (!btn) return;
-      if (typeof Notification === 'undefined') {
-        btn.textContent = '此瀏覽器不支援推播';
-      } else if (Notification.permission === 'granted') {
-        btn.textContent = '推播提醒已開啟 ✓';
-        btn.parentElement.classList.add('bg-emerald-50', 'text-emerald-700', 'border-emerald-300');
-      } else if (Notification.permission === 'denied') {
-        btn.textContent = '系統推播已被封鎖';
-      } else {
-        btn.textContent = '啟用系統推播通知';
-      }
-    }
-
-    function requestNotificationPermission() {
-      if (typeof Notification === 'undefined') {
-        showToast('目前環境不支援推播通知，系統會以網頁音效提示。');
-        return;
-      }
-      Notification.requestPermission().then(permission => {
-        updateNotifyButtonStatus();
-        if (permission === 'granted') {
-          showToast('已成功開啟系統推播通知！');
-          new Notification('保健品定時提醒已啟用', {
-            body: '系統將在您設定的時段提醒您服用保健品！'
-          });
-        }
-      });
-    }
-
-    function testNotificationSound() {
+    function playChime() {
       try {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = audioCtx.createOscillator();
@@ -1533,311 +1099,368 @@
         osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.15);
         gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.5);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.5);
       } catch (e) {}
-      showToast('🔔 提醒測試音效已播放！');
     }
 
-    setInterval(() => {
-      const now = new Date();
-      const currentHM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-      if (now.getSeconds() === 0) {
-        Object.entries(reminderTimes).forEach(([slot, timeStr]) => {
-          if (timeStr === currentHM) {
-            triggerSlotReminder(slot);
-          }
+    // iOS 主畫面 App 只能透過 service worker 顯示通知
+    function notify(title, body) {
+      if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistration().then(reg => {
+          if (reg) reg.showNotification(title, { body, icon: 'icons/icon-192.png', tag: 'supplement-reminder' });
+          else { try { new Notification(title, { body }); } catch (e) {} }
         });
-      }
-    }, 1000);
+      } else { try { new Notification(title, { body }); } catch (e) {} }
+    }
+
+    function requestNotificationPermission() {
+      if (typeof Notification === 'undefined') { showToast('這個瀏覽器不支援通知，時間到會播放提示音'); return; }
+      if (Notification.permission === 'granted') { showToast('要關閉通知，請到系統設定調整'); return; }
+      if (Notification.permission === 'denied') { showToast('通知已被封鎖，請到系統設定開啟', true); return; }
+      Notification.requestPermission().then(p => {
+        renderReminderView();
+        if (p === 'granted') { showToast('已開啟通知'); notify('保健品提醒已開啟', '時間到會提醒你吃保健品'); }
+      });
+    }
+
+    const firedToday = {};
+    function checkReminders() {
+      const key = getTodayKey(), hm = nowHM();
+      SLOT_ORDER.forEach(slot => {
+        if (reminderTimes[slot] === hm && firedToday[slot] !== key) {
+          firedToday[slot] = key;
+          triggerSlotReminder(slot);
+        }
+      });
+    }
+    setInterval(checkReminders, 15000);
 
     function triggerSlotReminder(slot) {
-      testNotificationSound();
-      const slotNames = { morning: '晨間/空腹', lunch: '午間隨餐', dinner: '晚間隨餐', bedtime: '睡前放鬆' };
-      const title = `⏰ 保健品服用提醒：${slotNames[slot] || slot}時間到了！`;
-      showToast(title);
-      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-        new Notification(title, {
-          body: '請記得打開工作台查看該時段的保健品並進行打卡！'
-        });
-      }
+      playChime();
+      const names = items.filter(it => slotOf(it) === slot && !(checkinRecords[getTodayKey()] || {})[it.id]).map(it => shortName(it.name));
+      if (!names.length) return;
+      const title = `${SLOTS[slot].name}時間到了`;
+      showToast(`${title}：${names.join('、')}`);
+      notify(title, `記得吃：${names.join('、')}`);
     }
 
+    // ---------- 紀錄 ----------
+    function level(key) {
+      const n = dayDone(key), f = items.length ? n / items.length : 0;
+      return n === 0 ? '' : f >= 1 ? 'l4' : f >= .8 ? 'l3' : f >= .5 ? 'l2' : 'l1';
+    }
     function renderHistoryView() {
-      render7DaysHistory();
-      renderTodayConsumedList();
-      renderMiniCalendar();
-    }
-
-    function render7DaysHistory() {
-      const container = document.getElementById('recent-7days-container');
-      if (!container) return;
-
-      const today = new Date();
-      let html = '';
-
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(today.getDate() - i);
-        const yr = d.getFullYear();
-        const mo = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        const key = `${yr}-${mo}-${day}`;
-
-        const checks = checkinRecords[key] || {};
-        const count = Object.keys(checks).length;
-        const total = items.length;
-        const isFull = total > 0 && count >= total;
-        const hasSome = count > 0;
-        const isToday = i === 0;
-
-        html += `
-          <div class="p-2.5 rounded-xl border ${isToday ? 'border-indigo-300 bg-indigo-50/50' : 'border-slate-100 bg-slate-50'} flex flex-col items-center">
-            <span class="text-[10px] text-slate-400 mb-1">${mo}/${day}</span>
-            <div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${isFull ? 'bg-emerald-500 text-white' : (hasSome ? 'bg-amber-400 text-white' : 'bg-slate-200 text-slate-400')}">
-              ${count}
-            </div>
-            <span class="text-[9px] text-slate-500 mt-1">${isToday ? '今天' : `${count}/${total}`}</span>
-          </div>
-        `;
+      const today = startOfToday();
+      const todayKey = keyOf(today);
+      const selKey = selectedDay || todayKey;
+      let streak = 0;
+      for (let i = 0; i < 1000; i++) {
+        const d = new Date(today); d.setDate(d.getDate() - i); const k = keyOf(d);
+        if (i === 0 && level(k) !== 'l4') continue;
+        if (level(k) === 'l4') streak++; else break;
       }
+      const y = today.getFullYear(), m = today.getMonth();
+      let taken = 0, expected = 0;
+      for (let dd = 1; dd <= today.getDate(); dd++) { taken += dayDone(keyOf(new Date(y, m, dd))); expected += items.length; }
+      const pills = Object.values(checkinRecords).reduce((sum, day) => sum + Object.values(day || {}).reduce((a, r) => a + (Number(r && r.daily) || 1), 0), 0);
 
-      container.innerHTML = html;
-    }
+      // 各品項服用率：最近 30 天（不含今天），從有紀錄的第一天起算
+      const recordKeys = Object.keys(checkinRecords).filter(k => Object.keys(checkinRecords[k] || {}).length).sort();
+      const firstKey = recordKeys[0];
+      const span = [];
+      for (let i = 1; i <= 30; i++) { const d = new Date(today); d.setDate(d.getDate() - i); const k = keyOf(d); if (firstKey && k >= firstKey) span.push(k); }
+      const adh = items.map(it => ({ it, pct: span.length ? Math.round(span.filter(k => (checkinRecords[k] || {})[it.id]).length / span.length * 100) : 0 })).sort((a, b) => a.pct - b.pct);
 
-    function renderTodayConsumedList() {
-      const container = document.getElementById('today-consumed-list');
-      if (!container) return;
-
-      const today = getTodayKey();
-      const checks = checkinRecords[today] || {};
-      const checkedIds = Object.keys(checks);
-
-      if (checkedIds.length === 0) {
-        container.innerHTML = '<div class="text-xs text-slate-400 text-center py-4 bg-slate-50 rounded-xl">今日尚未有任何品項打卡</div>';
-        return;
+      const lead = (new Date(y, m, 1).getDay() + 6) % 7;
+      const dim = new Date(y, m + 1, 0).getDate();
+      const cells = [];
+      for (let i = 0; i < lead; i++) cells.push('<span></span>');
+      for (let dd = 1; dd <= dim; dd++) {
+        const d = new Date(y, m, dd), k = keyOf(d), future = d > today;
+        cells.push(`<button class="day ${future ? 'future' : level(k)} ${k === selKey ? 'sel' : ''}" ${future ? 'disabled' : `data-day="${k}"`} aria-label="${m + 1}月${dd}日，吃了 ${dayDone(k)} / ${items.length} 款">${dd}</button>`);
       }
+      const sel = checkinRecords[selKey] || {};
+      const sd = fromKey(selKey);
+      const selIds = Object.keys(sel);
 
-      container.innerHTML = checkedIds.map(id => {
-        const item = items.find(it => String(it.id) === String(id));
-        if (!item) return '';
-        const info = checks[id];
-        return `
-          <div class="flex items-center justify-between py-1.5 px-2 bg-slate-50 rounded-lg text-xs">
-            <div class="flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-              <span class="font-semibold text-slate-800">${item.name}</span>
-            </div>
-            <div class="text-[11px] text-slate-400">
-              已服 <span class="font-bold text-slate-700">${item.daily} 顆</span> 
-              ${info?.time ? `(${info.time})` : ''}
-            </div>
-          </div>
-        `;
-      }).join('');
+      $('#screen-history').innerHTML = `
+        ${head(`${y} 年`, `${m + 1} 月紀錄`)}
+        <div class="card rate">
+          <div><b>${expected ? Math.round(taken / expected * 100) : 0}%</b><p>本月服用率<span>應吃 ${expected} 次，吃了 ${taken} 次</span></p></div>
+          <div class="rate-side"><div><b class="r">${streak}</b><span>連續全勤</span></div><div><b class="r">${pills.toLocaleString()}</b><span>累計顆數</span></div></div>
+        </div>
+        <div class="card cal">
+          <div class="cal-head"><b>每日完成度</b></div>
+          <div class="cal-grid">${['一', '二', '三', '四', '五', '六', '日'].map(w => `<span class="dow">${w}</span>`).join('')}${cells.join('')}</div>
+          <div class="legend">沒吃 <i></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i> 全勤</div>
+        </div>
+        <div class="card detail">
+          <h3>${sd.getMonth() + 1}/${sd.getDate()}（${WEEK[sd.getDay()]}）吃了 ${dayDone(selKey)} / ${items.length} 款</h3>
+          ${selIds.length ? `<ul>${selIds.map(id => { const it = findItem(id); const r = sel[id] || {}; return `<li>${it ? pill(it) : ''}<span class="nm">${it ? esc(shortName(it.name)) : '（已刪除的品項）'}</span><span class="tm">${esc(r.time || '')} · ${Number(r.daily) || 1} 顆</span></li>`; }).join('')}</ul>` : '<p class="note-line">這天沒有打卡紀錄</p>'}
+        </div>
+        ${items.length ? `<div class="label"><h2>各品項服用率</h2><span>${span.length ? `最近 ${span.length} 天` : '累積幾天紀錄後會出現'}</span></div>
+        ${span.length ? `<div class="card adh">
+          ${adh.map(({ it, pct }) => `<div class="adh-row">${pill(it)}<b>${esc(shortName(it.name))}</b><em>${pct}%</em><div class="adh-bar"><div class="${pct < 80 ? 'low' : ''}" style="transform:scaleX(${pct / 100})"></div></div></div>`).join('')}
+        </div>` : ''}` : ''}`;
     }
 
-    function renderMiniCalendar() {
-      const container = document.getElementById('mini-calendar');
-      const titleEl = document.getElementById('calendar-month-title');
-      if (!container) return;
-
-      const now = new Date();
-      const curYear = now.getFullYear();
-      const curMonth = now.getMonth();
-      if (titleEl) titleEl.textContent = `${curYear}年 ${curMonth + 1}月`;
-
-      const firstDay = new Date(curYear, curMonth, 1).getDay();
-      const daysInMonth = new Date(curYear, curMonth + 1, 0).getDate();
-
-      const weekHeaders = ['日', '一', '二', '三', '四', '五', '六'];
-      let html = weekHeaders.map(w => `<div class="text-[10px] font-bold text-slate-400 py-1">${w}</div>`).join('');
-
-      for (let i = 0; i < firstDay; i++) {
-        html += `<div></div>`;
-      }
-
-      let totalDaysCheckin = 0;
-      let totalPills = 0;
-
-      for (let day = 1; day <= daysInMonth; day++) {
-        const moStr = String(curMonth + 1).padStart(2, '0');
-        const dayStr = String(day).padStart(2, '0');
-        const key = `${curYear}-${moStr}-${dayStr}`;
-        const checks = checkinRecords[key] || {};
-        const count = Object.keys(checks).length;
-
-        if (count > 0) totalDaysCheckin++;
-        Object.values(checks).forEach(c => { totalPills += (c.daily || 1); });
-
-        const isToday = day === now.getDate();
-        let bgClass = 'text-slate-600 hover:bg-slate-100';
-
-        if (count >= items.length && items.length > 0) {
-          bgClass = 'bg-emerald-500 text-white font-bold';
-        } else if (count > 0) {
-          bgClass = 'bg-amber-100 text-amber-900 font-bold';
-        }
-
-        html += `
-          <div class="h-7 w-7 mx-auto rounded-lg flex items-center justify-center ${bgClass} ${isToday ? 'ring-2 ring-indigo-500' : ''}" title="${key}: 已服 ${count} 款">
-            ${day}
-          </div>
-        `;
-      }
-
-      container.innerHTML = html;
-
-      const totalDaysEl = document.getElementById('stat-total-checkin-days');
-      const totalPillsEl = document.getElementById('stat-total-pills-taken');
-      if (totalDaysEl) totalDaysEl.textContent = `${totalDaysCheckin} 天`;
-      if (totalPillsEl) totalPillsEl.textContent = `${totalPills} 顆`;
-    }
-
-    function changePurchased(index, delta) {
-      items[index].purchased = Math.max(0, (items[index].purchased || 0) + delta);
-      triggerCloudSync();
-      renderAll();
-    }
-
-    function setPurchased(index, val) {
-      items[index].purchased = Math.max(0, parseInt(val) || 0);
-      triggerCloudSync();
-      renderAll();
-    }
-
-    function receivePurchased(index) {
-      const it = items[index];
-      const count = it.purchased || 0;
-      if (count <= 0) return;
-      it.bottles = (it.bottles || 0) + count;
-      it.purchased = 0;
-      triggerCloudSync();
-      renderAll();
-      showToast(`已將「${it.name}」${count} 罐採購轉入現貨！`);
-    }
-
-    function changeBottles(index, delta) {
-      items[index].bottles = Math.max(0, (items[index].bottles || 0) + delta);
-      triggerCloudSync();
-      renderAll();
-    }
-
-    function setBottles(index, val) {
-      items[index].bottles = Math.max(0, parseInt(val) || 0);
-      triggerCloudSync();
-      renderAll();
-    }
-
-    function changeLoose(index, delta) {
-      items[index].loose = Math.max(0, (items[index].loose || 0) + delta);
-      triggerCloudSync();
-      renderAll();
-    }
-
-    function setLoose(index, val) {
-      items[index].loose = Math.max(0, parseInt(val) || 0);
-      triggerCloudSync();
-      renderAll();
-    }
-
-    function toggleAddModal() {
-      const modal = document.getElementById('add-modal');
-      modal.classList.toggle('hidden');
-    }
-
-    function handleAddItem(e) {
-      e.preventDefault();
-      const name = document.getElementById('form-name').value.trim();
-      const capacity = parseInt(document.getElementById('form-capacity').value) || 60;
-      const bottles = parseInt(document.getElementById('form-bottles').value) || 0;
-      const loose = parseInt(document.getElementById('form-loose').value) || 0;
-      const daily = parseFloat(document.getElementById('form-daily').value) || 1;
-      const slot = document.getElementById('form-slot').value || 'lunch';
-      const notes = document.getElementById('form-notes').value.trim();
-
-      if (!name) return;
-
-      items.unshift({
-        id: Date.now(),
-        name,
-        capacity,
-        bottles,
-        loose,
-        purchased: 0,
-        daily,
-        slot,
-        notes,
-        url: ''
-      });
-
-      triggerCloudSync();
-      renderAll();
-      e.target.reset();
-      toggleAddModal();
-      showToast(`成功新增「${name}」！`);
-    }
-
-    function deleteItem(index) {
-      const name = items[index]?.name;
-      items.splice(index, 1);
-      triggerCloudSync();
-      renderAll();
-      showToast(`已移除「${name}」`);
-    }
-
-    function resetData() {
-      items = JSON.parse(JSON.stringify(DEFAULT_DATA));
-      triggerCloudSync();
-      renderAll();
-      showToast('已重設為最新預設庫存');
-    }
+    // ---------- sheets / toast / undo ----------
+    function openSheet(id) { $('#backdrop').classList.add('open'); $('#' + id).classList.add('open'); }
+    function closeSheets() { $('#backdrop').classList.remove('open'); document.querySelectorAll('.sheet.open').forEach(s => s.classList.remove('open')); }
 
     let toastTimer;
-    function showToast(msg, isError = false) {
-      const toast = document.getElementById('toast');
-      const text = document.getElementById('toast-text');
-      if (!toast || !text) return;
-
-      text.textContent = msg;
-      toast.className = `fixed bottom-6 right-6 z-50 pointer-events-none flex items-center gap-2 ${isError ? 'bg-rose-600' : 'bg-slate-900'} text-white px-4 py-2.5 rounded-xl shadow-xl text-xs font-semibold transform translate-y-0 opacity-100 transition-all duration-300`;
-
+    function showToast(msg, isError = false, undoable = false) {
+      const el = $('#toast');
+      el.innerHTML = `<span>${esc(msg)}</span>${undoable ? '<button type="button" data-undo>復原</button>' : ''}`;
+      el.classList.toggle('error', !!isError);
+      el.classList.add('show');
       clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => {
-        toast.className = "fixed bottom-6 right-6 z-50 pointer-events-none flex items-center gap-2 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl text-xs font-semibold transform translate-y-16 opacity-0 transition-all duration-300";
-      }, 2500);
+      toastTimer = setTimeout(() => el.classList.remove('show'), undoable ? 5000 : 4000);
     }
 
+    // 復原：會改資料的操作前先拍快照，提示裡按「復原」就還原並重新同步
+    function snapshot() {
+      const key = getTodayKey();
+      undoSnap = JSON.stringify({ items, key, day: checkinRecords[key] || {} });
+    }
+    function undo() {
+      if (!undoSnap) return;
+      const snap = JSON.parse(undoSnap); undoSnap = null;
+      items = snap.items;
+      checkinRecords[snap.key] = snap.day;
+      triggerCloudSync(); renderAll(); showToast('已復原');
+    }
+    function commit(msg, undoable = true) {
+      triggerCloudSync(); renderAll();
+      if (msg) showToast(msg, false, undoable);
+    }
+
+    // ---------- dose sheet ----------
+    let doseItem = null, doseVal = 1;
+    function openDose(id) {
+      const it = findItem(id); if (!it) return;
+      const rec = (checkinRecords[getTodayKey()] || {})[it.id];
+      doseItem = it; doseVal = rec ? (Number(rec.daily) || doseOf(it)) : doseOf(it);
+      $('#doseTitle').textContent = shortName(it.name);
+      $('#doseDefault').checked = false;
+      $('#doseConfirm').textContent = rec ? '更新這次的份量' : '打卡';
+      updateDose(); openSheet('sheet-dose');
+    }
+    function updateDose() {
+      $('#doseVal').textContent = doseVal;
+      const d = doseOf(doseItem);
+      $('#doseMeta').textContent = doseVal === d ? `每次預設 ${d} 顆` : `每次預設 ${d} 顆，這次改成 ${doseVal} 顆`;
+    }
+    function confirmDose() {
+      snapshot();
+      const it = doseItem, key = getTodayKey();
+      if (!checkinRecords[key]) checkinRecords[key] = {};
+      const rec = checkinRecords[key][it.id];
+      if (rec) { applyPills(it, (Number(rec.daily) || doseOf(it)) - doseVal); rec.daily = doseVal; }
+      else { checkinRecords[key][it.id] = { time: nowHM(), daily: doseVal }; applyPills(it, -doseVal); justChecked = String(it.id); }
+      const setDefault = $('#doseDefault').checked; if (setDefault) it.daily = doseVal;
+      closeSheets();
+      commit(`「${shortName(it.name)}」這次吃 ${doseVal} 顆${setDefault ? '，已設為預設' : ''}`);
+      justChecked = null;
+    }
+
+    function paintReset() {
+      const b = $('#resetBtn');
+      b.className = `btn ${pendingReset ? 'confirm' : 'ghost-danger'}`;
+      b.textContent = pendingReset ? '再按一次確認重設' : '重設為預設品項';
+    }
+    function setLeadDays(v) {
+      leadDays = Math.max(0, Math.min(90, v));
+      try { localStorage.setItem(STORAGE_KEY_LEAD_DAYS, String(leadDays)); } catch (e) {}
+      $('#leadDays').value = leadDays;
+      renderInventoryView();
+      if ($('#sheet-shop').classList.contains('open')) renderShop();
+    }
+
+    // ---------- render ----------
     function renderAll() {
-      let dangerCount = 0;
-      let warningCount = 0;
-      let safeCount = 0;
-      let totalPurchasedBottles = 0;
-
-      items.forEach(it => {
-        const { status } = calculateStats(it);
-        if (status === 'danger' || status === 'empty') dangerCount++;
-        else if (status === 'warning') warningCount++;
-        else safeCount++;
-        totalPurchasedBottles += (it.purchased || 0);
-      });
-
-      document.getElementById('stat-total-count').textContent = `${items.length} 款`;
-      document.getElementById('stat-danger-count').textContent = `${dangerCount} 款`;
-      document.getElementById('stat-warning-count').textContent = `${warningCount} 款`;
-      document.getElementById('stat-purchased-bottles').textContent = `${totalPurchasedBottles} 罐`;
-
-      updateTodayProgress();
-      renderCards();
-      renderGantt();
       renderCheckinView();
+      renderInventoryView();
       renderReminderView();
       renderHistoryView();
+      if ($('#sheet-shop').classList.contains('open')) renderShop();
+      paintSync();
     }
 
-    window.addEventListener('DOMContentLoaded', renderAll);
+    function switchTab(t) {
+      tab = t;
+      document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t)));
+      ['checkin', 'inventory', 'reminder', 'history'].forEach(s => { $('#screen-' + s).hidden = s !== t; });
+      $('#fab').hidden = t !== 'inventory';
+      if (t === 'checkin') viewDay = null;
+      renderAll();
+      const scr = $('#screen-' + t); scr.classList.remove('enter'); void scr.offsetWidth; scr.classList.add('enter');
+      const sc = $('#scroller'); sc.scrollTop = 0;
+      if (t === 'checkin' && currentSlot() !== 'morning') {
+        const el = $('#slot-' + currentSlot()); if (el) sc.scrollTop = Math.max(0, el.offsetTop - 60);
+      }
+    }
+
+    function renderPickers() {
+      $('#slotPick').innerHTML = SLOT_ORDER.map(s => `<button type="button" data-pick-slot="${s}" aria-pressed="${s === addSlot}">${SLOTS[s].name}</button>`).join('');
+      $('#formPick').innerHTML = Object.keys(FORMS).map(f => `<button type="button" data-pick-form="${f}" aria-pressed="${f === addForm}"><i class="pill teal" aria-hidden="true">${FORM_SVG[f]}</i>${FORMS[f]}</button>`).join('');
+    }
+
+    // ---------- events ----------
+    document.addEventListener('click', e => {
+      const t = e.target.closest('button, a');
+      if (!t) return;
+      const d = t.dataset;
+
+      if (d.tab) return switchTab(d.tab);
+      if ('undo' in d) return undo();
+      if ('close' in d) return closeSheets();
+      if ('settings' in d) return openSettings();
+
+      // 今天
+      if (d.view) { viewDay = d.view === getTodayKey() ? null : d.view; return renderCheckinView(); }
+      if (d.check) {
+        snapshot();
+        const it = findItem(d.check);
+        const on = doToggle(d.check);
+        if (on === null) return;
+        justChecked = on ? String(it.id) : null;
+        commit(on ? `已打卡「${shortName(it.name)}」，扣 ${doseOf(it)} 顆` : `已取消「${shortName(it.name)}」`);
+        justChecked = null;
+        return;
+      }
+      if (d.dose) return openDose(d.dose);
+      if (t.id === 'doseMinus') { doseVal = Math.max(1, doseVal - 1); return updateDose(); }
+      if (t.id === 'dosePlus') { doseVal = Math.min(50, doseVal + 1); return updateDose(); }
+      if (t.id === 'doseConfirm') return confirmDose();
+      if (d.slotAll) {
+        snapshot();
+        const key = getTodayKey(); if (!checkinRecords[key]) checkinRecords[key] = {};
+        let n = 0;
+        items.filter(it => slotOf(it) === d.slotAll && !checkinRecords[key][it.id]).forEach(it => { doToggle(it.id); n++; });
+        return commit(`${SLOTS[d.slotAll].name}已打卡 ${n} 款`);
+      }
+
+      // 庫存
+      if (d.filter) { currentFilterV4 = d.filter; return renderInventoryView(); }
+      if (d.open) { openItem = String(openItem) === d.open ? null : d.open; pendingDelete = null; return renderInventoryView(); }
+      if (d.step) {
+        snapshot();
+        const [id, f, dl] = d.step.split(':'); const it = findItem(id); if (!it) return;
+        it[f] = Math.max(f === 'daily' ? 1 : 0, (Number(it[f]) || 0) + Number(dl));
+        return commit();
+      }
+      if (d.setform) {
+        const [id, f] = d.setform.split(':'); const it = findItem(id); if (!it) return;
+        it.form = f; return commit();
+      }
+      if (d.receive) {
+        snapshot();
+        const it = findItem(d.receive); if (!it) return;
+        const n = Number(it.purchased) || 0; if (n <= 0) return;
+        it.bottles = (Number(it.bottles) || 0) + n; it.purchased = 0;
+        return commit(`「${shortName(it.name)}」${n} 罐已轉入庫存`);
+      }
+      if (d.delete) {
+        if (String(pendingDelete) !== d.delete) {
+          pendingDelete = d.delete; renderInventoryView();
+          clearTimeout(pendingDeleteTimer);
+          pendingDeleteTimer = setTimeout(() => { pendingDelete = null; renderInventoryView(); }, 4000);
+          return;
+        }
+        snapshot(); pendingDelete = null; clearTimeout(pendingDeleteTimer);
+        const i = items.findIndex(it => String(it.id) === d.delete); if (i < 0) return;
+        const [gone] = items.splice(i, 1); openItem = null;
+        return commit(`已刪除「${shortName(gone.name)}」`);
+      }
+      if ('openShop' in d) { renderShop(); return openSheet('sheet-shop'); }
+      if (d.qty) { const [id, dl] = d.qty.split(':'); shopQty[id] = Math.max(1, (shopQty[id] || 1) + Number(dl)); return renderShop(); }
+      if ('markOrdered' in d) {
+        snapshot();
+        const list = items.filter(it => stats(it).status !== 'ok' && !(it.purchased > 0));
+        list.forEach(it => { it.purchased = shopQty[it.id] || suggestQty(it); delete shopQty[it.id]; });
+        return commit(`${list.length} 款已標記為已下單，到貨後按「轉入庫存」`);
+      }
+      if (t.id === 'fab') { renderPickers(); $('#f-name-err').hidden = true; return openSheet('sheet-add'); }
+      if (d.pickSlot) { addSlot = d.pickSlot; return renderPickers(); }
+      if (d.pickForm) { addForm = d.pickForm; return renderPickers(); }
+
+      // 提醒
+      if ('notify' in d) return requestNotificationPermission();
+      if ('testSound' in d) { playChime(); return showToast('這是提醒的聲音'); }
+
+      // 紀錄
+      if (d.day) { selectedDay = d.day; return renderHistoryView(); }
+
+      // 設定
+      if (t.id === 'cloudSave') return saveAndConnectCloud();
+      if (t.id === 'cloudClear') return clearCloudApi();
+      if (d.lead) return setLeadDays(leadDays + Number(d.lead));
+      if (t.id === 'resetBtn') {
+        if (!pendingReset) {
+          pendingReset = true; paintReset(); clearTimeout(pendingResetTimer);
+          pendingResetTimer = setTimeout(() => { pendingReset = false; paintReset(); }, 4000);
+          return;
+        }
+        snapshot(); pendingReset = false; clearTimeout(pendingResetTimer); paintReset();
+        items = JSON.parse(JSON.stringify(DEFAULT_DATA));
+        closeSheets();
+        return commit('已重設為預設品項');
+      }
+    });
+    $('#backdrop').addEventListener('click', closeSheets);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheets(); });
+
+    document.addEventListener('change', e => {
+      const el = e.target;
+      if (el.dataset.set) {
+        snapshot();
+        const [id, f] = el.dataset.set.split(':'); const it = findItem(id); if (!it) return;
+        it[f] = Math.max(f === 'daily' ? 1 : 0, parseInt(el.value, 10) || 0);
+        return commit();
+      }
+      if (el.dataset.qtyset) { shopQty[el.dataset.qtyset] = Math.max(1, parseInt(el.value, 10) || 1); return renderShop(); }
+      if (el.id === 'leadDays') return setLeadDays(parseInt(el.value, 10) || 0);
+      if (el.dataset.time) {
+        if (!el.value) return;
+        reminderTimes[el.dataset.time] = el.value;
+        localStorage.setItem(STORAGE_KEY_REMINDERS, JSON.stringify(reminderTimes));
+        triggerCloudSync();
+        renderCheckinView();
+        return showToast(`${SLOTS[el.dataset.time].name}提醒改為 ${el.value}`);
+      }
+    });
+
+    $('#addForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const name = $('#f-name').value.trim();
+      $('#f-name-err').hidden = !!name;
+      if (!name) { $('#f-name').focus(); return; }
+      const num = (id, min) => Math.max(min, parseInt($(id).value, 10) || min);
+      const url = $('#f-url').value.trim();
+      snapshot();
+      items.unshift({
+        id: Date.now(), name, form: addForm,
+        capacity: num('#f-cap', 1), daily: num('#f-daily', 1), bottles: num('#f-bottles', 0), loose: num('#f-loose', 0),
+        purchased: 0, slot: addSlot, notes: $('#f-notes').value.trim(), url: /^https?:\/\//.test(url) ? url : ''
+      });
+      e.target.reset(); closeSheets();
+      currentFilterV4 = 'all';
+      commit(`已加入「${name}」`);
+    });
+
+    // ---------- start ----------
+    initData();
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') { checkReminders(); renderAll(); }
+    });
+    switchTab('checkin');
+
+    if ('serviceWorker' in navigator && location.protocol === 'https:') {
+      window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+    }
   </script>
 </body>
 </html>

@@ -5,6 +5,8 @@
 const SHEET_ITEMS = "Supplements";
 const SHEET_META = "AppMeta";
 const SHEET_CHECKINS = "Checkins";
+// 品項欄位；「劑型」是後來加的第 12 欄（膠囊 capsule / 軟膠囊 softgel / 錠劑 tablet），舊資料可以是空的
+const ITEM_HEADERS = ["ID", "品名", "單罐規格", "未拆罐數", "散裝顆數", "預計採購罐數", "每日用量", "服用時段", "小備註", "購買連結", "最後更新", "劑型"];
 const CHECKIN_HEADERS = ["日期", "品項ID", "品名", "時間", "顆數"];
 // 舊版把打卡紀錄整包 JSON 存在 AppMeta 的一格（有 50,000 字元上限），搬移後改名保留為備份
 const META_KEY_LEGACY_CHECKINS = "checkins";
@@ -95,7 +97,7 @@ function getOrCreateSheet(sheetName, headers) {
 // 讀取所有資料
 function loadAllData() {
   const sheet = getOrCreateSheet(SHEET_ITEMS, [
-    "ID", "品名", "單罐規格", "未拆罐數", "散裝顆數", "預計採購罐數", "每日用量", "服用時段", "小備註", "購買連結", "最後更新"
+    ...ITEM_HEADERS
   ]);
 
   const rows = sheet.getDataRange().getValues();
@@ -115,7 +117,8 @@ function loadAllData() {
       daily: Number(r[6]) || 1,
       slot: r[7] || "lunch",
       notes: r[8] || "",
-      url: r[9] || ""
+      url: r[9] || "",
+      form: r[11] || ""
     });
   }
 
@@ -163,13 +166,16 @@ function loadRevision() {
 function saveAllData(data, revision) {
   const items = data.items || [];
   const sheet = getOrCreateSheet(SHEET_ITEMS, [
-    "ID", "品名", "單罐規格", "未拆罐數", "散裝顆數", "預計採購罐數", "每日用量", "服用時段", "小備註", "購買連結", "最後更新"
+    ...ITEM_HEADERS
   ]);
+
+  // 舊試算表的標題列只有 11 欄，儲存時補成完整標題
+  sheet.getRange(1, 1, 1, ITEM_HEADERS.length).setValues([ITEM_HEADERS]);
 
   // 清除舊資料（保留標題）
   const lastRow = sheet.getLastRow();
   if (lastRow > 1) {
-    sheet.getRange(2, 1, lastRow - 1, 11).clearContent();
+    sheet.getRange(2, 1, lastRow - 1, ITEM_HEADERS.length).clearContent();
   }
 
   if (items.length > 0) {
@@ -185,9 +191,11 @@ function saveAllData(data, revision) {
       item.slot || "lunch",
       item.notes || "",
       item.url || "",
-      now
+      now,
+      item.form || ""
     ]);
-    sheet.getRange(2, 1, rows.length, 11).setValues(rows);
+    ensureRows(sheet, rows.length + 1);
+    sheet.getRange(2, 1, rows.length, ITEM_HEADERS.length).setValues(rows);
   }
 
   if (data.checkins) {
