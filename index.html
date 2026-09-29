@@ -636,6 +636,7 @@
       if (pushInFlight) return;
       lastRefreshAt = Date.now();
       if (isCloudDirty() && isCloudVerified()) {
+        clearTimeout(syncDebounceTimer);  // 立即上傳，取消排程中的重複上傳
         return pushToCloud();
       }
       return syncWithCloud(isSilent);
@@ -744,12 +745,15 @@
           const cloudHasCheckins = !!result.data.checkins &&
             Object.values(result.data.checkins).some(day => day && Object.keys(day).length > 0);
 
-          if (cloudHasItems) {
+          // force（衝突後）時雲端就是準，即使是空的也照單全收，不留下被拒絕的本機修改
+          if (cloudHasItems || (force && Array.isArray(result.data.items))) {
             items = result.data.items;
             saveDataLocal();
           }
-          if (cloudHasCheckins) {
+          if (cloudHasCheckins || (force && result.data.checkins)) {
             checkinRecords = result.data.checkins;
+            const today = getTodayKey();
+            if (!checkinRecords[today]) checkinRecords[today] = {};
             saveCheckinsLocal();
           }
           if (result.data.reminders) {
@@ -761,7 +765,7 @@
           localStorage.setItem(STORAGE_KEY_CLOUD_VERIFIED, cloudApiUrl);
           if (!isSilent) showToast('已成功從 Google 試算表拉取最新數據！');
           renderAll();
-          if (cloudHasItems || cloudHasCheckins) {
+          if (cloudHasItems || cloudHasCheckins || force) {
             setCloudDirty(false);
             return 'hasData';
           }
