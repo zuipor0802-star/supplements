@@ -186,16 +186,30 @@ function saveAllData(data) {
     legacyCheckins = null;
   }
 
-  metaSheet.clearContents();
-  metaSheet.appendRow(["Key", "JSON"]);
+  // 先一次寫入新內容，再清掉多出來的舊列；中途出錯也不會先把備份清空
+  const metaOut = [["Key", "JSON"]];
   if (data.reminders) {
-    metaSheet.appendRow(["reminders", JSON.stringify(data.reminders)]);
+    metaOut.push(["reminders", JSON.stringify(data.reminders)]);
   }
   if (legacyCheckins) {
-    metaSheet.appendRow([META_KEY_LEGACY_CHECKINS, legacyCheckins]);
+    metaOut.push([META_KEY_LEGACY_CHECKINS, legacyCheckins]);
   }
   if (legacyBackup) {
-    metaSheet.appendRow([META_KEY_LEGACY_BACKUP, legacyBackup]);
+    metaOut.push([META_KEY_LEGACY_BACKUP, legacyBackup]);
+  }
+  ensureRows(metaSheet, metaOut.length);
+  metaSheet.getRange(1, 1, metaOut.length, 2).setValues(metaOut);
+  const staleMetaRows = metaSheet.getLastRow() - metaOut.length;
+  if (staleMetaRows > 0) {
+    metaSheet.getRange(metaOut.length + 1, 1, staleMetaRows, Math.max(2, metaSheet.getLastColumn())).clearContent();
+  }
+}
+
+// getRange().setValues() 不會自動加列（新工作表預設 1,000 列），寫入前先補足
+function ensureRows(sheet, totalRows) {
+  const maxRows = sheet.getMaxRows();
+  if (maxRows < totalRows) {
+    sheet.insertRowsAfter(maxRows, totalRows - maxRows);
   }
 }
 
@@ -253,6 +267,7 @@ function saveCheckinRows(checkins, items) {
     sheet.getRange(2, 1, lastRow - 1, CHECKIN_HEADERS.length).clearContent();
   }
   if (rows.length > 0) {
+    ensureRows(sheet, rows.length + 1);
     const range = sheet.getRange(2, 1, rows.length, CHECKIN_HEADERS.length);
     // 日期、品項ID、時間設為純文字，避免被自動轉成日期或數字
     range.setNumberFormat("@");
