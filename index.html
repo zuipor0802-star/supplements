@@ -664,7 +664,7 @@
             items = result.data.items;
             saveDataLocal();
           }
-          if (result.data.checkins && Object.keys(result.data.checkins).length > 0) {
+          if (cloudHasCheckins) {
             checkinRecords = result.data.checkins;
             saveCheckinsLocal();
           }
