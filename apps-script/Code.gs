@@ -199,9 +199,18 @@ function saveAllData(data) {
   }
   ensureRows(metaSheet, metaOut.length);
   metaSheet.getRange(1, 1, metaOut.length, 2).setValues(metaOut);
-  const staleMetaRows = metaSheet.getLastRow() - metaOut.length;
-  if (staleMetaRows > 0) {
-    metaSheet.getRange(metaOut.length + 1, 1, staleMetaRows, Math.max(2, metaSheet.getLastColumn())).clearContent();
+  clearOutside(metaSheet, metaOut.length, 2);
+}
+
+// 清掉 (numRows × numCols) 範圍右邊與下面殘留的舊內容
+function clearOutside(sheet, numRows, numCols) {
+  const lastCol = sheet.getLastColumn();
+  if (lastCol > numCols && numRows > 0) {
+    sheet.getRange(1, numCols + 1, numRows, lastCol - numCols).clearContent();
+  }
+  const staleRows = sheet.getLastRow() - numRows;
+  if (staleRows > 0) {
+    sheet.getRange(numRows + 1, 1, staleRows, Math.max(numCols, sheet.getLastColumn())).clearContent();
   }
 }
 
@@ -262,10 +271,7 @@ function saveCheckinRows(checkins, items) {
     });
   });
 
-  const lastRow = sheet.getLastRow();
-  if (lastRow > 1) {
-    sheet.getRange(2, 1, lastRow - 1, CHECKIN_HEADERS.length).clearContent();
-  }
+  // 先寫入新內容，再清掉多出來的舊列；中途出錯也不會先把紀錄清空
   if (rows.length > 0) {
     ensureRows(sheet, rows.length + 1);
     const range = sheet.getRange(2, 1, rows.length, CHECKIN_HEADERS.length);
@@ -273,6 +279,10 @@ function saveCheckinRows(checkins, items) {
     range.setNumberFormat("@");
     sheet.getRange(2, 5, rows.length, 1).setNumberFormat("0");
     range.setValues(rows);
+  }
+  const staleRows = sheet.getLastRow() - (rows.length + 1);
+  if (staleRows > 0) {
+    sheet.getRange(rows.length + 2, 1, staleRows, CHECKIN_HEADERS.length).clearContent();
   }
 }
 
