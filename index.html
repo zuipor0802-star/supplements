@@ -1,0 +1,1725 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>保健品庫存、打卡與提醒工作台 (雲端同步版)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+    body {
+      font-family: 'Inter', 'Noto Sans TC', sans-serif;
+    }
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+      -webkit-appearance: none; 
+      margin: 0; 
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      height: 6px;
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background-color: #cbd5e1;
+      border-radius: 9999px;
+    }
+    .bg-striped-pattern {
+      background-image: repeating-linear-gradient(45deg, transparent, transparent 7px, rgba(255,255,255,0.28) 7px, rgba(255,255,255,0.28) 14px);
+    }
+    .item-card-hover {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .item-card-hover:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.08);
+    }
+    .tab-btn.active {
+      background-color: #0f172a;
+      color: #ffffff;
+      box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.15);
+    }
+  </style>
+</head>
+<body class="bg-slate-100/70 text-slate-800 antialiased min-h-screen pb-12">
+
+  <!-- 頂部導航與功能頁籤列 -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200/80 shadow-xs">
+    <div class="max-w-[1680px] mx-auto px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-xl shadow-md shadow-emerald-600/30">
+          <i class="fa-solid fa-pills"></i>
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+            保健品智能管理工作台
+            <span class="text-[11px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-md hidden sm:inline-block">雲端同步版</span>
+          </h1>
+          <p class="text-[11px] text-slate-400">庫存預警 · 耗盡甘特圖 · 每日時段打卡 · Google 試算表即時聯動</p>
+        </div>
+      </div>
+      
+      <!-- 頁籤導覽列 (Tabs) -->
+      <nav class="flex items-center bg-slate-100 p-1 rounded-xl gap-1 text-xs font-semibold">
+        <button onclick="switchTab('tab-inventory')" id="nav-tab-inventory" class="tab-btn active px-3.5 py-1.5 rounded-lg text-slate-600 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-chart-gantt"></i>
+          <span>庫存與甘特圖</span>
+        </button>
+        <button onclick="switchTab('tab-checkin')" id="nav-tab-checkin" class="tab-btn px-3.5 py-1.5 rounded-lg text-slate-600 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-calendar-check"></i>
+          <span>每日時段打卡</span>
+          <span id="nav-checkin-badge" class="bg-emerald-500 text-white text-[10px] px-1.5 py-0.2 rounded-full hidden">0/11</span>
+        </button>
+        <button onclick="switchTab('tab-reminder')" id="nav-tab-reminder" class="tab-btn px-3.5 py-1.5 rounded-lg text-slate-600 transition flex items-center gap-1.5">
+          <i class="fa-regular fa-bell"></i>
+          <span>提醒與時段設定</span>
+        </button>
+        <button onclick="switchTab('tab-history')" id="nav-tab-history" class="tab-btn px-3.5 py-1.5 rounded-lg text-slate-600 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+          <span>消耗紀錄與日曆</span>
+        </button>
+      </nav>
+
+      <!-- 右上角雲端同步與快捷操作 -->
+      <div class="flex items-center gap-2">
+        <!-- 雲端同步狀態燈 -->
+        <button onclick="toggleCloudModal()" id="btn-cloud-status" class="px-2.5 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 transition flex items-center gap-1.5 shadow-xs">
+          <span id="cloud-indicator" class="w-2 h-2 rounded-full bg-slate-400"></span>
+          <span id="cloud-status-text" class="text-slate-600">未設定雲端</span>
+        </button>
+
+        <button onclick="syncWithCloud()" id="btn-manual-sync" class="p-2 text-slate-600 hover:text-emerald-600 hover:bg-slate-100 rounded-xl transition" title="立即從 Google 試算表同步">
+          <i class="fa-solid fa-arrows-rotate text-xs" id="sync-icon"></i>
+        </button>
+
+        <button onclick="toggleAddModal()" class="bg-slate-900 hover:bg-black text-white text-xs font-semibold px-3 py-2 rounded-xl transition flex items-center gap-1.5 active:scale-95 shadow-xs">
+          <i class="fa-solid fa-plus text-[10px]"></i>
+          <span>新增品項</span>
+        </button>
+        <button onclick="resetData()" title="恢復預設數據" class="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition">
+          <i class="fa-solid fa-rotate-left text-xs"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主容器 -->
+  <main class="max-w-[1680px] mx-auto px-3 sm:px-6 mt-4">
+
+    <!-- 頂部即時摘要指標 (所有頁籤通用) -->
+    <section class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mb-4">
+      <div class="bg-white px-3.5 py-2.5 rounded-xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+        <span class="text-xs text-slate-500 font-medium">追蹤總品項</span>
+        <span id="stat-total-count" class="text-sm font-bold text-slate-800">11 款</span>
+      </div>
+      <div class="bg-white px-3.5 py-2.5 rounded-xl border border-rose-100 shadow-xs flex items-center justify-between">
+        <span class="text-xs text-rose-600 font-medium flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-rose-500"></span>已斷貨 / &le;14天
+        </span>
+        <span id="stat-danger-count" class="text-sm font-bold text-rose-600">1 款</span>
+      </div>
+      <div class="bg-white px-3.5 py-2.5 rounded-xl border border-amber-100 shadow-xs flex items-center justify-between">
+        <span class="text-xs text-amber-600 font-medium flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-amber-500"></span>15~30天補貨
+        </span>
+        <span id="stat-warning-count" class="text-sm font-bold text-amber-600">1 款</span>
+      </div>
+      <div class="bg-white px-3.5 py-2.5 rounded-xl border border-emerald-100 shadow-xs flex items-center justify-between">
+        <span class="text-xs text-emerald-600 font-medium flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>今日打卡進度
+        </span>
+        <span id="stat-today-progress" class="text-sm font-bold text-emerald-600">0 / 11 款</span>
+      </div>
+      <div class="bg-indigo-50/80 px-3.5 py-2.5 rounded-xl border border-indigo-100 shadow-xs flex items-center justify-between col-span-2 sm:col-span-1">
+        <span class="text-xs text-indigo-700 font-medium flex items-center gap-1.5">
+          <i class="fa-solid fa-cart-shopping text-xs text-indigo-500"></i>模擬採購罐數
+        </span>
+        <span id="stat-purchased-bottles" class="text-sm font-bold text-indigo-700">0 罐</span>
+      </div>
+    </section>
+
+    <!-- ==================== 頁籤 1: 庫存與甘特圖 ==================== -->
+    <div id="tab-inventory" class="tab-content space-y-4">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        
+        <!-- 左欄：庫存控制與採購調整區 (佔 4 欄) -->
+        <div class="lg:col-span-5 xl:col-span-4 space-y-2.5">
+          <div class="flex items-center justify-between px-1">
+            <div class="flex items-center gap-2">
+              <h2 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                <i class="fa-solid fa-sliders text-emerald-600"></i>
+                <span>庫存與採購微調</span>
+              </h2>
+              <span class="text-[11px] text-slate-400">（即時連動右側）</span>
+            </div>
+
+            <!-- 快速篩選按鈕 -->
+            <div class="flex items-center gap-1 text-[11px] bg-white p-0.5 rounded-lg border border-slate-200">
+              <button onclick="setFilter('all')" id="filter-all" class="px-2 py-0.5 rounded font-medium bg-slate-800 text-white">全部</button>
+              <button onclick="setFilter('need')" id="filter-need" class="px-2 py-0.5 rounded font-medium text-slate-600 hover:text-slate-900">需補貨</button>
+              <button onclick="setFilter('safe')" id="filter-safe" class="px-2 py-0.5 rounded font-medium text-slate-600 hover:text-slate-900">充足</button>
+            </div>
+          </div>
+
+          <!-- 保健品微調卡片列表 -->
+          <div id="cards-container" class="space-y-2.5"></div>
+        </div>
+
+        <!-- 右欄：即時甘特圖視窗 (佔 8 欄，釘選視野) -->
+        <div class="lg:col-span-7 xl:col-span-8 lg:sticky lg:top-[68px]">
+          <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm">
+            
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-100">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <h3 class="text-sm sm:text-base font-bold text-slate-900">耗盡時間軸預測 (Gantt Timeline)</h3>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-0.5">深色為現有庫存天數，紫色斜紋為採購延伸天數</p>
+              </div>
+              
+              <div class="flex items-center gap-2">
+                <span id="gantt-scale-indicator" class="text-[11px] text-indigo-700 bg-indigo-50 font-semibold px-2 py-0.5 rounded-md border border-indigo-100">
+                  動態軸長
+                </span>
+              </div>
+            </div>
+
+            <!-- 甘特圖可橫向滾動容器 -->
+            <div class="overflow-x-auto custom-scrollbar">
+              <div class="min-w-[580px]">
+                
+                <!-- 時間表頭刻度 -->
+                <div class="grid grid-cols-12 text-[11px] font-semibold text-slate-400 pb-2 border-b border-slate-100 select-none items-center">
+                  <div class="col-span-3 pr-2 font-bold text-slate-500">
+                    品項名稱
+                  </div>
+                  <div class="col-span-9 flex items-center gap-2">
+                    <div id="gantt-ticks" class="relative flex-1 h-5"></div>
+                    <div class="w-20 shrink-0 text-right pr-1 font-bold text-slate-400">
+                      可吃天數
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 動態甘特圖列 -->
+                <div id="gantt-rows" class="divide-y divide-slate-100 mt-1.5"></div>
+              </div>
+            </div>
+
+            <!-- 甘特圖底端圖例 -->
+            <div class="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between text-[11px] text-slate-500 gap-2">
+              <div class="flex items-center gap-3">
+                <span class="flex items-center gap-1.5 font-medium text-slate-700">
+                  <span class="w-3 h-2.5 rounded bg-emerald-600 inline-block"></span> 現貨天數
+                </span>
+                <span class="flex items-center gap-1.5 font-medium text-indigo-700">
+                  <span class="w-3 h-2.5 rounded bg-indigo-500 bg-striped-pattern inline-block border border-indigo-300"></span> 採購延伸
+                </span>
+                <span class="flex items-center gap-1.5 font-medium text-amber-600">
+                  <span class="w-2.5 h-0.5 border-t border-dashed border-amber-400 inline-block"></span> 30天補貨線
+                </span>
+              </div>
+              <span class="text-slate-400">由急迫至充裕排序</span>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ==================== 頁籤 2: 每日時段打卡與消耗 ==================== -->
+    <div id="tab-checkin" class="tab-content hidden space-y-4">
+      <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2.5">
+            <span id="today-date-badge" class="px-3 py-1 bg-slate-900 text-white font-bold text-xs rounded-lg"></span>
+            <h2 class="text-base font-bold text-slate-800">今日用藥與打卡紀錄</h2>
+          </div>
+          <p class="text-xs text-slate-400 mt-1">打卡後會自動扣除庫存並同步至 Google 試算表與甘特圖！</p>
+        </div>
+
+        <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
+          <div class="text-right">
+            <div class="text-xs text-slate-400">今日完成率</div>
+            <div id="today-rate-text" class="text-base font-bold text-emerald-600">0%</div>
+          </div>
+          <div class="w-32 bg-slate-100 rounded-full h-2.5 overflow-hidden">
+            <div id="today-rate-bar" class="bg-emerald-500 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+          <button onclick="consumeAllToday()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-3.5 py-2 rounded-xl transition shadow-xs active:scale-95">
+            <i class="fa-solid fa-check-double mr-1"></i>今日全部打卡
+          </button>
+        </div>
+      </div>
+
+      <!-- 四大時段分組卡片 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4" id="time-slots-container"></div>
+    </div>
+
+    <!-- ==================== 頁籤 3: 提醒與時段設定 ==================== -->
+    <div id="tab-reminder" class="tab-content hidden space-y-4">
+      <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm max-w-4xl mx-auto">
+        <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
+          <div>
+            <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+              <i class="fa-solid fa-bell text-indigo-600"></i> 服藥定時提醒設定
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">自訂各時段推播時間，瀏覽器會在時間到達時進行提示</p>
+          </div>
+          <button onclick="requestNotificationPermission()" id="btn-notify-perm" class="px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 hover:bg-slate-50 transition flex items-center gap-1.5">
+            <i class="fa-regular fa-bell"></i>
+            <span id="notify-status-text">啟用系統推播通知</span>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="bg-amber-50/60 rounded-xl p-4 border border-amber-200/60 flex items-center justify-between">
+            <div>
+              <span class="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                <i class="fa-solid fa-sun text-amber-500"></i> 晨間 / 空腹時段
+              </span>
+              <p class="text-[11px] text-amber-700/80 mt-0.5">精胺酸 (空腹)、B群、黑瑪卡、葉黃素</p>
+            </div>
+            <input type="time" id="reminder-time-morning" onchange="saveReminderTimes()" class="bg-white px-2 py-1 border border-amber-300 rounded-lg text-xs font-bold text-slate-800 focus:outline-none" value="08:00" />
+          </div>
+
+          <div class="bg-blue-50/60 rounded-xl p-4 border border-blue-200/60 flex items-center justify-between">
+            <div>
+              <span class="text-xs font-bold text-blue-900 flex items-center gap-1.5">
+                <i class="fa-solid fa-utensils text-blue-500"></i> 午間隨餐時段
+              </span>
+              <p class="text-[11px] text-blue-700/80 mt-0.5">魚油 (脂溶)、薑黃素、鋅、豔紫鉚</p>
+            </div>
+            <input type="time" id="reminder-time-lunch" onchange="saveReminderTimes()" class="bg-white px-2 py-1 border border-blue-300 rounded-lg text-xs font-bold text-slate-800 focus:outline-none" value="12:30" />
+          </div>
+
+          <div class="bg-orange-50/60 rounded-xl p-4 border border-orange-200/60 flex items-center justify-between">
+            <div>
+              <span class="text-xs font-bold text-orange-900 flex items-center gap-1.5">
+                <i class="fa-solid fa-cloud-sun text-orange-500"></i> 晚間隨餐時段
+              </span>
+              <p class="text-[11px] text-orange-700/80 mt-0.5">南瓜籽萃取、茄紅素 (脂溶性)</p>
+            </div>
+            <input type="time" id="reminder-time-dinner" onchange="saveReminderTimes()" class="bg-white px-2 py-1 border border-orange-300 rounded-lg text-xs font-bold text-slate-800 focus:outline-none" value="18:30" />
+          </div>
+
+          <div class="bg-indigo-50/60 rounded-xl p-4 border border-indigo-200/60 flex items-center justify-between">
+            <div>
+              <span class="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
+                <i class="fa-solid fa-moon text-indigo-500"></i> 睡前 / 放鬆時段
+              </span>
+              <p class="text-[11px] text-indigo-700/80 mt-0.5">南非醉茄 KSM-66 (幫助調節舒壓)</p>
+            </div>
+            <input type="time" id="reminder-time-bedtime" onchange="saveReminderTimes()" class="bg-white px-2 py-1 border border-indigo-300 rounded-lg text-xs font-bold text-slate-800 focus:outline-none" value="22:00" />
+          </div>
+        </div>
+
+        <div class="mt-5 p-4 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div class="text-xs text-slate-500">
+            <span class="font-bold text-slate-700 block mb-0.5">💡 智能提醒運作方式：</span>
+            只要開啟本分頁，時間一到系統會發出鈴聲與提示（授權推播亦會收到系統推播）。
+          </div>
+          <button onclick="testNotificationSound()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-xs transition shrink-0 active:scale-95">
+            <i class="fa-solid fa-volume-high mr-1"></i> 測試提醒提示音
+          </button>
+        </div>
+
+        <div class="mt-6 pt-5 border-t border-slate-100">
+          <h3 class="text-xs font-bold text-slate-700 mb-3 flex items-center gap-1.5">
+            <i class="fa-solid fa-circle-info text-emerald-600"></i> 11 款保健品最佳吸收時段與注意事項
+          </h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-[11px] text-left">
+              <thead class="bg-slate-100 text-slate-500 uppercase">
+                <tr>
+                  <th class="py-2 px-3 rounded-l-lg">保健品品項</th>
+                  <th class="py-2 px-3">建議時段</th>
+                  <th class="py-2 px-3">每日份量</th>
+                  <th class="py-2 px-3 rounded-r-lg">服用小技巧</th>
+                </tr>
+              </thead>
+              <tbody id="timing-guide-tbody" class="divide-y divide-slate-100 text-slate-700"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== 頁籤 4: 消耗紀錄與日曆 ==================== -->
+    <div id="tab-history" class="tab-content hidden space-y-4">
+      <div class="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <div class="lg:col-span-7 bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+              <i class="fa-solid fa-fire text-orange-500"></i> 最近 7 天打卡連續紀錄
+            </h3>
+            <span class="text-xs text-slate-400">每天養成健康好習慣</span>
+          </div>
+          <div class="grid grid-cols-7 gap-2 text-center" id="recent-7days-container"></div>
+          <div class="pt-3 border-t border-slate-100">
+            <h4 class="text-xs font-bold text-slate-700 mb-2">今天打卡清單明細</h4>
+            <div id="today-consumed-list" class="space-y-1.5 max-h-[300px] overflow-y-auto custom-scrollbar pr-1"></div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-5 bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+              <i class="fa-regular fa-calendar-days text-indigo-600"></i> 本月打卡日曆
+            </h3>
+            <span id="calendar-month-title" class="text-xs font-bold text-slate-600"></span>
+          </div>
+          <div id="mini-calendar" class="grid grid-cols-7 gap-1 text-center text-xs"></div>
+          <div class="pt-3 border-t border-slate-100 text-xs text-slate-500 space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span>歷史累計打卡天數</span>
+              <span id="stat-total-checkin-days" class="font-bold text-slate-800">1 天</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span>累計消耗保健品顆數</span>
+              <span id="stat-total-pills-taken" class="font-bold text-emerald-600">12 顆</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- 雲端同步設定彈窗 (Google Sheets) -->
+  <div id="cloud-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 transition-all">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+          <i class="fa-solid fa-cloud text-emerald-600"></i> Google 試算表雲端同步設定
+        </h3>
+        <button onclick="toggleCloudModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <div class="mt-3 space-y-3 text-xs">
+        <p class="text-slate-500 leading-relaxed">
+          貼上您發布的 Google Apps Script 網頁應用程式網址，電腦、手機與平板即可全面即時同步！
+        </p>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Google Apps Script API 網址</label>
+          <input 
+            type="url" 
+            id="cloud-api-url" 
+            placeholder="https://script.google.com/macros/s/AKfycb.../exec"
+            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500" 
+          />
+        </div>
+
+        <div class="flex items-center justify-between pt-2">
+          <button onclick="clearCloudApi()" class="text-rose-600 hover:underline">清除設定</button>
+          <div class="flex items-center gap-2">
+            <button onclick="toggleCloudModal()" class="px-3 py-1.5 text-slate-600 hover:bg-slate-100 rounded-xl transition">關閉</button>
+            <button onclick="saveAndConnectCloud()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-1.5 rounded-xl shadow-xs transition">
+              儲存並立即同步
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 彈窗式新增品項表單 -->
+  <div id="add-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-5 shadow-2xl border border-slate-200 transition-all">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+          <i class="fa-solid fa-circle-plus text-emerald-600"></i> 新增保健品品項
+        </h3>
+        <button onclick="toggleAddModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <form id="add-form" onsubmit="handleAddItem(event)" class="mt-4 space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">保健品品名 *</label>
+          <input type="text" id="form-name" required placeholder="例如：維他命 D3 5000 IU" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">單罐規格 (顆/罐)</label>
+            <input type="number" id="form-capacity" min="1" value="60" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">每日吃幾顆</label>
+            <input type="number" id="form-daily" min="0.1" step="0.5" value="1" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500" />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">現有未拆整罐</label>
+            <input type="number" id="form-bottles" min="0" value="1" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">開封散裝顆數</label>
+            <input type="number" id="form-loose" min="0" value="0" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500" />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">建議服用時段</label>
+            <select id="form-slot" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500">
+              <option value="morning">晨間 / 空腹</option>
+              <option value="lunch" selected>午間隨餐</option>
+              <option value="dinner">晚間隨餐</option>
+              <option value="bedtime">睡前 / 放鬆</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">服用小備註</label>
+            <input type="text" id="form-notes" placeholder="例如：隨油脂餐吸收佳" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500" />
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button type="button" onclick="toggleAddModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition">取消</button>
+          <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 text-xs font-bold rounded-xl shadow transition">確認加入</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast 訊息提示元件 -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 pointer-events-none flex items-center gap-2 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl text-xs font-semibold transform translate-y-16 opacity-0 transition-all duration-300">
+    <i class="fa-solid fa-circle-check text-emerald-400"></i>
+    <span id="toast-text">已更新</span>
+  </div>
+
+  <script>
+    // 預設 11 款保健品最新盤點數據
+    const DEFAULT_DATA = [
+      { id: 1, name: "NOW Foods L-OptiZinc (鋅)", capacity: 100, bottles: 2, loose: 5, purchased: 0, daily: 1, slot: 'lunch', notes: '隨餐服用，避免空腹刺激胃部', url: "https://www.iherb.com/pr/now-foods-l-optizinc-100-veg-capsules/738" },
+      { id: 2, name: "Life Extension 生物活性完整 B 群", capacity: 60, bottles: 1, loose: 10, purchased: 0, daily: 2, slot: 'morning', notes: '早/午餐後隨餐，提供日間活力', url: "https://www.iherb.com/pr/life-extension-bioactive-complete-b-complex-60-vegetarian-capsules/67051" },
+      { id: 3, name: "Force Factor 基礎黑瑪卡", capacity: 90, bottles: 0, loose: 0, purchased: 4, daily: 2, slot: 'morning', notes: '早餐後隨水吞服，補充精力', url: "https://www.iherb.com/pr/force-factor-fundamentals-black-maca-90-capsules/128405" },
+      { id: 4, name: "Nutricost KSM-66 南非醉茄", capacity: 60, bottles: 2, loose: 11, purchased: 0, daily: 1, slot: 'bedtime', notes: '晚餐後或睡前放鬆時服用', url: "https://www.iherb.com/pr/nutricost-ksm-66-ashwagandha-root-extract-60-capsules/139433" },
+      { id: 5, name: "Life Extension 水溶性南瓜籽萃取", capacity: 60, bottles: 3, loose: 0, purchased: 0, daily: 1, slot: 'dinner', notes: '晚餐隨餐服用', url: "https://www.iherb.com/pr/life-extension-water-soluble-pumpkin-seed-extract-60-vegetarian-capsules-262-mg-per-capsule/13174" },
+      { id: 6, name: "Sports Research 阿拉斯加野生魚油", capacity: 90, bottles: 1, loose: 0, purchased: 0, daily: 1, slot: 'lunch', notes: '隨含健康油脂正餐服用吸收佳', url: "https://www.iherb.com/pr/sports-research-alaskan-omega-3-fish-oil-90-softgels/90284" },
+      { id: 7, name: "NOW Foods 左旋精胺酸 1000mg", capacity: 120, bottles: 0, loose: 90, purchased: 0, daily: 2, slot: 'morning', notes: '早晨空腹或運動前半小時服用', url: "https://www.iherb.com/pr/now-foods-l-arginine-1-000-mg-120-tablets/411" },
+      { id: 8, name: "Swanson 茄紅素 20mg", capacity: 60, bottles: 3, loose: 0, purchased: 0, daily: 1, slot: 'dinner', notes: '脂溶性成分，晚間正餐後服用佳', url: "https://www.iherb.com/pr/swanson-vitamins-lycopene-20-mg-60-softgels/116298" },
+      { id: 9, name: "Doctor's Best 葉黃素 (Lutemax 2020)", capacity: 180, bottles: 0, loose: 140, purchased: 0, daily: 1, slot: 'morning', notes: '早晨隨餐服用，維持晶亮', url: "https://www.iherb.com/pr/doctor-s-best-lutein-lutemax-2020-20-mg-180-softgels/58903" },
+      { id: 10, name: "CGN 薑黃素 C3 Complex", capacity: 120, bottles: 0, loose: 35, purchased: 0, daily: 1, slot: 'lunch', notes: '含黑胡椒鹼，隨午餐服用佳', url: "https://www.iherb.com/pr/california-gold-nutrition-curcumin-c3-complex-with-bioperine-120-veggie-capsules/60047" },
+      { id: 11, name: "Piping Rock 豔紫鉚 (紅高顆) 420mg", capacity: 90, bottles: 0, loose: 16, purchased: 0, daily: 1, slot: 'lunch', notes: '隨餐服用，傳統草藥滋補強身', url: "https://www.pipingrock.com/zh-tw/products/butea-superba-420-mg-90-quick-release-capsules-12060" }
+    ];
+
+    const STORAGE_KEY_ITEMS = 'supplement_tracker_inventory_v8';
+    const STORAGE_KEY_CHECKINS = 'supplement_tracker_checkins_v8';
+    const STORAGE_KEY_REMINDERS = 'supplement_tracker_reminders_v8';
+    const STORAGE_KEY_CLOUD_URL = 'supplement_tracker_cloud_url';
+
+    let items = [];
+    let currentFilter = 'all';
+    let checkinRecords = {};
+    let reminderTimes = { morning: "08:00", lunch: "12:30", dinner: "18:30", bedtime: "22:00" };
+    let cloudApiUrl = "";
+    let isSyncing = false;
+    let syncDebounceTimer = null;
+
+    function getTodayKey() {
+      const d = new Date();
+      const yr = d.getFullYear();
+      const mo = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${yr}-${mo}-${day}`;
+    }
+
+    function initData() {
+      // 讀取 Google Apps Script 網址
+      cloudApiUrl = localStorage.getItem(STORAGE_KEY_CLOUD_URL) || "";
+      updateCloudStatusUI();
+
+      // 先從本地快取讀取
+      const savedItems = localStorage.getItem(STORAGE_KEY_ITEMS);
+      if (savedItems) {
+        try { items = JSON.parse(savedItems); } catch (e) { items = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
+      } else {
+        items = JSON.parse(JSON.stringify(DEFAULT_DATA));
+      }
+
+      if (items && items.length < DEFAULT_DATA.length) {
+        DEFAULT_DATA.forEach(defItem => {
+          if (!items.some(it => it.id === defItem.id)) {
+            items.push(JSON.parse(JSON.stringify(defItem)));
+          }
+        });
+        saveDataLocal();
+      }
+
+      const savedCheckins = localStorage.getItem(STORAGE_KEY_CHECKINS);
+      if (savedCheckins) {
+        try { checkinRecords = JSON.parse(savedCheckins); } catch (e) {}
+      }
+
+      const savedReminders = localStorage.getItem(STORAGE_KEY_REMINDERS);
+      if (savedReminders) {
+        try { reminderTimes = Object.assign(reminderTimes, JSON.parse(savedReminders)); } catch (e) {}
+      }
+
+      const today = getTodayKey();
+      if (!checkinRecords[today]) {
+        checkinRecords[today] = {};
+      }
+
+      // 如果有設定雲端 API，背景自動拉取最新資料
+      if (cloudApiUrl) {
+        syncWithCloud(true);
+      }
+    }
+    initData();
+
+    function saveDataLocal() {
+      localStorage.setItem(STORAGE_KEY_ITEMS, JSON.stringify(items));
+    }
+
+    function saveCheckinsLocal() {
+      localStorage.setItem(STORAGE_KEY_CHECKINS, JSON.stringify(checkinRecords));
+    }
+
+    // 防抖自動同步至雲端
+    function triggerCloudSync() {
+      saveDataLocal();
+      saveCheckinsLocal();
+      if (!cloudApiUrl) return;
+
+      clearTimeout(syncDebounceTimer);
+      syncDebounceTimer = setTimeout(() => {
+        pushToCloud();
+      }, 1200);
+    }
+
+    // 向 Google 試算表推播儲存
+    async function pushToCloud() {
+      if (!cloudApiUrl) return;
+      setSyncLoading(true);
+      try {
+        const payload = {
+          action: "saveAll",
+          data: {
+            items: items,
+            checkins: checkinRecords,
+            reminders: reminderTimes
+          }
+        };
+
+        // 使用 text/plain 避免 CORS preflight OPTIONS 請求阻擋
+        const res = await fetch(cloudApiUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(payload)
+        });
+
+        updateCloudIndicator('online', '雲端已同步');
+      } catch (err) {
+        updateCloudIndicator('offline', '離線暫存中');
+      } finally {
+        setSyncLoading(false);
+      }
+    }
+
+    // 從 Google 試算表拉取資料
+    async function syncWithCloud(isSilent = false) {
+      if (!cloudApiUrl) {
+        if (!isSilent) toggleCloudModal();
+        return;
+      }
+
+      setSyncLoading(true);
+      try {
+        const fetchUrl = `${cloudApiUrl}?action=getData&_t=${Date.now()}`;
+        const res = await fetch(fetchUrl);
+        const result = await res.json();
+
+        if (result.status === "success" && result.data) {
+          if (Array.isArray(result.data.items) && result.data.items.length > 0) {
+            items = result.data.items;
+            saveDataLocal();
+          }
+          if (result.data.checkins && Object.keys(result.data.checkins).length > 0) {
+            checkinRecords = result.data.checkins;
+            saveCheckinsLocal();
+          }
+          if (result.data.reminders) {
+            reminderTimes = Object.assign(reminderTimes, result.data.reminders);
+            localStorage.setItem(STORAGE_KEY_REMINDERS, JSON.stringify(reminderTimes));
+          }
+
+          updateCloudIndicator('online', '已同步 Google 試算表');
+          if (!isSilent) showToast('已成功從 Google 試算表拉取最新數據！');
+          renderAll();
+        } else {
+          throw new Error(result.message || '未知錯誤');
+        }
+      } catch (err) {
+        updateCloudIndicator('offline', '讀取失敗 (使用本機暫存)');
+        if (!isSilent) showToast('同步失敗，目前顯示本機暫存資料', true);
+      } finally {
+        setSyncLoading(false);
+      }
+    }
+
+    function setSyncLoading(loading) {
+      isSyncing = loading;
+      const icon = document.getElementById('sync-icon');
+      if (icon) {
+        if (loading) icon.classList.add('fa-spin', 'text-emerald-600');
+        else icon.classList.remove('fa-spin', 'text-emerald-600');
+      }
+    }
+
+    function updateCloudStatusUI() {
+      const input = document.getElementById('cloud-api-url');
+      if (input) input.value = cloudApiUrl;
+      if (cloudApiUrl) {
+        updateCloudIndicator('online', '雲端就緒');
+      } else {
+        updateCloudIndicator('none', '未設定雲端');
+      }
+    }
+
+    function updateCloudIndicator(status, text) {
+      const dot = document.getElementById('cloud-indicator');
+      const label = document.getElementById('cloud-status-text');
+      if (!dot || !label) return;
+
+      label.textContent = text;
+      if (status === 'online') {
+        dot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+      } else if (status === 'offline') {
+        dot.className = "w-2 h-2 rounded-full bg-amber-500";
+      } else {
+        dot.className = "w-2 h-2 rounded-full bg-slate-400";
+      }
+    }
+
+    function toggleCloudModal() {
+      const m = document.getElementById('cloud-modal');
+      m.classList.toggle('hidden');
+      if (!m.classList.contains('hidden')) {
+        document.getElementById('cloud-api-url').value = cloudApiUrl;
+      }
+    }
+
+    function saveAndConnectCloud() {
+      const url = document.getElementById('cloud-api-url').value.trim();
+      if (!url) {
+        showToast('請輸入有效的 Google Apps Script 網址', true);
+        return;
+      }
+      cloudApiUrl = url;
+      localStorage.setItem(STORAGE_KEY_CLOUD_URL, cloudApiUrl);
+      updateCloudStatusUI();
+      toggleCloudModal();
+      showToast('雲端 API 設定已儲存，正在雙向同步...');
+      // 首次設定：若雲端是空的，先推現有資料上去；然後嘗試拉取
+      pushToCloud().then(() => {
+        syncWithCloud();
+      });
+    }
+
+    function clearCloudApi() {
+      cloudApiUrl = "";
+      localStorage.removeItem(STORAGE_KEY_CLOUD_URL);
+      updateCloudStatusUI();
+      toggleCloudModal();
+      showToast('已取消雲端同步，目前採用純本機模式');
+    }
+
+    function calculateStats(item) {
+      const currentPills = (Math.max(0, item.bottles || 0) * (item.capacity || 0)) + Math.max(0, item.loose || 0);
+      const purchasedPills = Math.max(0, item.purchased || 0) * (item.capacity || 0);
+      const totalCombinedPills = currentPills + purchasedPills;
+
+      const daily = Number(item.daily) > 0 ? Number(item.daily) : 1;
+      const currentDays = Math.floor(currentPills / daily);
+      const purchasedDays = Math.floor(purchasedPills / daily);
+      const totalDays = currentDays + purchasedDays;
+
+      const currentTarget = new Date();
+      currentTarget.setDate(currentTarget.getDate() + currentDays);
+      const currentFinishShort = `${currentTarget.getMonth() + 1}/${currentTarget.getDate()}`;
+
+      const totalTarget = new Date();
+      totalTarget.setDate(totalTarget.getDate() + totalDays);
+      const totalFinishShort = `${totalTarget.getMonth() + 1}/${totalTarget.getDate()}`;
+
+      let status = 'safe';
+      let colorBg = 'bg-emerald-600';
+      let badgeStyle = 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      let statusText = '充足';
+
+      if (currentDays <= 0) {
+        status = 'empty';
+        colorBg = 'bg-slate-400';
+        badgeStyle = 'bg-rose-100 text-rose-800 border-rose-200';
+        statusText = '現貨已斷';
+      } else if (currentDays <= 14) {
+        status = 'danger';
+        colorBg = 'bg-rose-500';
+        badgeStyle = 'bg-rose-100 text-rose-800 border-rose-200';
+        statusText = '即將斷貨';
+      } else if (currentDays <= 30) {
+        status = 'warning';
+        colorBg = 'bg-amber-500';
+        badgeStyle = 'bg-amber-100 text-amber-800 border-amber-200';
+        statusText = '建議下單';
+      }
+
+      return { 
+        currentPills, 
+        purchasedPills, 
+        totalCombinedPills, 
+        currentDays, 
+        purchasedDays, 
+        totalDays, 
+        currentFinishShort, 
+        totalFinishShort, 
+        status, 
+        colorBg, 
+        badgeStyle, 
+        statusText 
+      };
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+      const target = document.getElementById(tabId);
+      const btn = document.getElementById(`nav-${tabId}`);
+      if (target) target.classList.remove('hidden');
+      if (btn) btn.classList.add('active');
+
+      if (tabId === 'tab-inventory') {
+        renderGantt();
+        renderCards();
+      } else if (tabId === 'tab-checkin') {
+        renderCheckinView();
+      } else if (tabId === 'tab-reminder') {
+        renderReminderView();
+      } else if (tabId === 'tab-history') {
+        renderHistoryView();
+      }
+    }
+
+    function getTimelineScale(maxDays) {
+      const target = Math.max(Math.ceil(maxDays * 1.08), 60);
+      let maxTimeline;
+      let ticks = [];
+
+      if (target <= 90) {
+        maxTimeline = 90;
+        ticks = [0, 15, 30, 60, 90];
+      } else if (target <= 150) {
+        maxTimeline = 150;
+        ticks = [0, 30, 60, 90, 120, 150];
+      } else if (target <= 240) {
+        maxTimeline = 240;
+        ticks = [0, 30, 60, 120, 180, 240];
+      } else if (target <= 360) {
+        maxTimeline = 360;
+        ticks = [0, 30, 60, 120, 180, 240, 300, 360];
+      } else if (target <= 540) {
+        maxTimeline = 540;
+        ticks = [0, 30, 90, 180, 270, 360, 450, 540];
+      } else {
+        const step = 120;
+        maxTimeline = Math.ceil(target / step) * step;
+        ticks = [0, 30];
+        for (let d = step; d <= maxTimeline; d += step) {
+          if (!ticks.includes(d)) ticks.push(d);
+        }
+      }
+
+      if (!ticks.includes(30)) {
+        ticks.push(30);
+        ticks.sort((a, b) => a - b);
+      }
+
+      return { maxTimeline, ticks };
+    }
+
+    function setFilter(type) {
+      currentFilter = type;
+      ['all', 'need', 'safe'].forEach(f => {
+        const btn = document.getElementById(`filter-${f}`);
+        if (!btn) return;
+        if (f === type) {
+          btn.className = 'px-2 py-0.5 rounded font-medium bg-slate-800 text-white';
+        } else {
+          btn.className = 'px-2 py-0.5 rounded font-medium text-slate-600 hover:text-slate-900';
+        }
+      });
+      renderCards();
+    }
+
+    function highlightRow(itemId, isActive) {
+      const ganttRow = document.getElementById(`gantt-row-${itemId}`);
+      const cardRow = document.getElementById(`card-row-${itemId}`);
+      if (ganttRow) {
+        if (isActive) ganttRow.classList.add('bg-indigo-50/80', 'ring-1', 'ring-indigo-300');
+        else ganttRow.classList.remove('bg-indigo-50/80', 'ring-1', 'ring-indigo-300');
+      }
+      if (cardRow) {
+        if (isActive) cardRow.classList.add('ring-1', 'ring-indigo-400');
+        else cardRow.classList.remove('ring-1', 'ring-indigo-400');
+      }
+    }
+
+    function renderCards() {
+      const container = document.getElementById('cards-container');
+      if (!container) return;
+
+      let filteredItems = items.map((it, idx) => ({ ...it, originalIndex: idx }));
+      if (currentFilter === 'need') {
+        filteredItems = filteredItems.filter(it => {
+          const s = calculateStats(it).status;
+          return s === 'danger' || s === 'empty' || s === 'warning';
+        });
+      } else if (currentFilter === 'safe') {
+        filteredItems = filteredItems.filter(it => calculateStats(it).status === 'safe');
+      }
+
+      if (filteredItems.length === 0) {
+        container.innerHTML = `<div class="p-8 text-center text-slate-400 text-xs bg-white rounded-xl border border-slate-200">此篩選條件下無品項</div>`;
+        return;
+      }
+
+      const today = getTodayKey();
+      const todayChecks = checkinRecords[today] || {};
+
+      container.innerHTML = filteredItems.map(item => {
+        const index = item.originalIndex;
+        const stats = calculateStats(item);
+        const isCheckedToday = !!todayChecks[item.id];
+
+        const slotBadgeMap = {
+          morning: '<span class="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.5 rounded font-medium">晨間空腹</span>',
+          lunch: '<span class="bg-blue-100 text-blue-800 text-[10px] px-1.5 py-0.5 rounded font-medium">午間隨餐</span>',
+          dinner: '<span class="bg-orange-100 text-orange-800 text-[10px] px-1.5 py-0.5 rounded font-medium">晚間隨餐</span>',
+          bedtime: '<span class="bg-indigo-100 text-indigo-800 text-[10px] px-1.5 py-0.5 rounded font-medium">睡前放鬆</span>'
+        };
+
+        return `
+          <div 
+            id="card-row-${item.id}"
+            onmouseenter="highlightRow(${item.id}, true)"
+            onmouseleave="highlightRow(${item.id}, false)"
+            class="item-card-hover bg-white rounded-xl p-3 border border-slate-200 shadow-xs transition"
+          >
+            <div class="flex items-start justify-between gap-2 mb-1.5">
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <h3 class="font-bold text-xs sm:text-sm text-slate-900 truncate" title="${item.name}">${item.name}</h3>
+                  ${slotBadgeMap[item.slot || 'lunch'] || ''}
+                  ${item.url ? `<a href="${item.url}" target="_blank" class="text-slate-400 hover:text-emerald-600 text-[11px]"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>` : ''}
+                </div>
+                <div class="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                  <span>單罐 ${item.capacity} 顆</span>
+                  <span>·</span>
+                  <span>每日 ${item.daily} 顆</span>
+                  <span>·</span>
+                  <span class="text-slate-700 font-semibold">現有 ${stats.currentPills} 顆</span>
+                </div>
+              </div>
+
+              <span class="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-md border ${stats.badgeStyle}">
+                現貨 ${stats.currentDays}天 (${stats.statusText})
+              </span>
+            </div>
+
+            <!-- 控制列：3 欄排版 -->
+            <div class="grid grid-cols-12 gap-1.5 items-center bg-slate-50/90 p-1.5 rounded-lg border border-slate-100 text-xs">
+              
+              <!-- 1. 現有整罐 -->
+              <div class="col-span-4 bg-white p-1 rounded-md border border-slate-200 shadow-xs">
+                <div class="flex items-center justify-between text-[9px] text-slate-500 mb-0.5">
+                  <span>未拆罐</span>
+                  <span class="text-slate-400">&times;${item.capacity}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <button onclick="changeBottles(${index}, -1)" class="w-5 h-5 flex items-center justify-center font-bold text-slate-600 hover:bg-slate-100 rounded text-xs active:scale-95">-</button>
+                  <input 
+                    type="number" 
+                    min="0" 
+                    value="${item.bottles || 0}" 
+                    oninput="setBottles(${index}, this.value)"
+                    class="w-7 text-center font-bold text-xs text-slate-800 bg-transparent focus:outline-none"
+                  />
+                  <button onclick="changeBottles(${index}, 1)" class="w-5 h-5 flex items-center justify-center font-bold text-slate-600 hover:bg-slate-100 rounded text-xs active:scale-95">+</button>
+                </div>
+              </div>
+
+              <!-- 2. 開封散裝 -->
+              <div class="col-span-4 bg-white p-1 rounded-md border border-slate-200 shadow-xs">
+                <div class="flex items-center justify-between text-[9px] text-slate-500 mb-0.5">
+                  <span>開封散裝</span>
+                  <span class="text-slate-400">顆</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <button onclick="changeLoose(${index}, -1)" class="w-5 h-5 flex items-center justify-center font-bold text-slate-600 hover:bg-slate-100 rounded text-xs active:scale-95">-</button>
+                  <input 
+                    type="number" 
+                    min="0" 
+                    value="${item.loose || 0}" 
+                    oninput="setLoose(${index}, this.value)"
+                    class="w-7 text-center font-bold text-xs text-slate-800 bg-transparent focus:outline-none"
+                  />
+                  <button onclick="changeLoose(${index}, 1)" class="w-5 h-5 flex items-center justify-center font-bold text-slate-600 hover:bg-slate-100 rounded text-xs active:scale-95">+</button>
+                </div>
+              </div>
+
+              <!-- 3. 預計採購罐數 -->
+              <div class="col-span-4 bg-indigo-50/80 p-1 rounded-md border border-indigo-200 shadow-xs">
+                <div class="flex items-center justify-between text-[9px] text-indigo-800 mb-0.5 font-semibold">
+                  <span>預計採購</span>
+                  <span class="text-indigo-400">罐</span>
+                </div>
+                <div class="flex items-center justify-between bg-white rounded border border-indigo-200">
+                  <button onclick="changePurchased(${index}, -1)" class="w-5 h-5 flex items-center justify-center font-bold text-indigo-700 hover:bg-indigo-50 rounded text-xs active:scale-95">-</button>
+                  <input 
+                    type="number" 
+                    min="0" 
+                    value="${item.purchased || 0}" 
+                    oninput="setPurchased(${index}, this.value)"
+                    class="w-7 text-center font-bold text-xs text-indigo-950 bg-transparent focus:outline-none"
+                  />
+                  <button onclick="changePurchased(${index}, 1)" class="w-5 h-5 flex items-center justify-center font-bold text-indigo-700 hover:bg-indigo-50 rounded text-xs active:scale-95">+</button>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- 卡片底端快速操作 -->
+            <div class="flex items-center justify-between mt-1.5 pt-1.5 border-t border-slate-100">
+              <div class="flex items-center gap-1.5">
+                <button onclick="toggleCheckin(${item.id})" class="${isCheckedToday ? 'bg-emerald-600 text-white' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200'} text-[10px] font-bold px-2 py-1 rounded-md transition active:scale-95 flex items-center gap-1">
+                  <i class="fa-solid ${isCheckedToday ? 'fa-check-circle' : 'fa-check'} text-[9px]"></i>
+                  <span>${isCheckedToday ? '今日已打卡' : `吃 ${item.daily} 顆打卡`}</span>
+                </button>
+                ${item.purchased > 0 ? `
+                  <button onclick="receivePurchased(${index})" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-[10px] px-2 py-1 rounded-md transition active:scale-95 shadow-xs">
+                    到貨 (+${item.purchased}罐)
+                  </button>
+                ` : ''}
+              </div>
+
+              <button onclick="deleteItem(${index})" class="text-slate-300 hover:text-rose-500 text-xs p-1 transition" title="刪除品項">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderGantt() {
+      const container = document.getElementById('gantt-rows');
+      const ticksContainer = document.getElementById('gantt-ticks');
+      const scaleIndicator = document.getElementById('gantt-scale-indicator');
+      if (!container || !ticksContainer) return;
+
+      const sorted = [...items].sort((a, b) => {
+        const da = calculateStats(a).currentDays;
+        const db = calculateStats(b).currentDays;
+        return da - db;
+      });
+
+      const maxItemDays = Math.max(...items.map(it => calculateStats(it).totalDays), 0);
+      const { maxTimeline: MAX_TIMELINE_DAYS, ticks: tickDays } = getTimelineScale(maxItemDays);
+
+      if (scaleIndicator) {
+        scaleIndicator.textContent = `最高 ${maxItemDays} 天 / 軸長 ${MAX_TIMELINE_DAYS} 天`;
+      }
+
+      ticksContainer.innerHTML = tickDays.map(d => {
+        const pct = ((d / MAX_TIMELINE_DAYS) * 100).toFixed(2);
+        const label = d === 0 ? '今天' : (d === 30 ? '30天' : `${d}天`);
+        const isAmber = d === 30;
+
+        let transformClass = '-translate-x-1/2';
+        if (d === 0) transformClass = 'translate-x-0';
+        else if (d === MAX_TIMELINE_DAYS) transformClass = '-translate-x-full';
+
+        return `
+          <span 
+            class="absolute top-0 ${transformClass} whitespace-nowrap ${isAmber ? 'text-amber-600 font-bold' : 'text-slate-400'}" 
+            style="left: ${pct}%;"
+          >
+            ${label}
+          </span>
+        `;
+      }).join('');
+
+      container.innerHTML = sorted.map(item => {
+        const stats = calculateStats(item);
+        const currentPct = ((stats.currentDays / MAX_TIMELINE_DAYS) * 100);
+        const purchasedPct = ((stats.purchasedDays / MAX_TIMELINE_DAYS) * 100);
+
+        const gridLinesHtml = tickDays.map(d => {
+          const pct = ((d / MAX_TIMELINE_DAYS) * 100).toFixed(2);
+          const isAmber = d === 30;
+          return `
+            <div 
+              class="absolute top-0 bottom-0 w-px border-l ${isAmber ? 'border-amber-300 border-dashed z-10' : 'border-slate-200 border-dashed z-0'} pointer-events-none" 
+              style="left: ${pct}%;"
+            ></div>
+          `;
+        }).join('');
+
+        return `
+          <div 
+            id="gantt-row-${item.id}"
+            onmouseenter="highlightRow(${item.id}, true)"
+            onmouseleave="highlightRow(${item.id}, false)"
+            class="grid grid-cols-12 items-center py-2 px-1.5 transition rounded-lg"
+          >
+            <div class="col-span-3 pr-2 flex flex-col justify-center min-w-0">
+              <span class="font-bold text-[11px] text-slate-800 truncate" title="${item.name}">${item.name}</span>
+              <span class="text-[10px] text-slate-400 truncate">
+                現貨至 ${stats.currentDays > 0 ? stats.currentFinishShort : '<b class="text-rose-500">已斷</b>'}
+                ${stats.purchasedDays > 0 ? `<b class="text-indigo-600"> 延至 ${stats.totalFinishShort}</b>` : ''}
+              </span>
+            </div>
+
+            <div class="col-span-9 flex items-center gap-1.5">
+              <div class="relative flex-1 h-6 bg-slate-100 rounded-md flex items-center px-0.5 overflow-hidden">
+                ${gridLinesHtml}
+
+                <div class="relative z-20 flex items-center h-5 w-full">
+                  ${stats.currentDays > 0 ? `
+                    <div 
+                      class="${stats.colorBg} h-5 rounded-l ${stats.purchasedDays > 0 ? '' : 'rounded-r'} flex items-center justify-center px-1.5 text-[10px] font-bold text-white shadow-xs transition-all duration-200 shrink-0 select-none" 
+                      style="width: ${Math.max(currentPct, 0)}%; min-width: 28px;"
+                      title="${item.name} 現有：${stats.currentDays} 天"
+                    >
+                      ${stats.currentDays}d
+                    </div>
+                  ` : ''}
+
+                  ${stats.purchasedDays > 0 ? `
+                    <div 
+                      class="bg-indigo-500 bg-striped-pattern border-y border-r border-indigo-400/50 h-5 ${stats.currentDays > 0 ? 'rounded-r' : 'rounded'} flex items-center justify-center px-1.5 text-[10px] font-bold text-white shadow-xs transition-all duration-200 shrink-0 select-none" 
+                      style="width: ${Math.max(purchasedPct, 0)}%; min-width: 28px;"
+                      title="${item.name} 採購延長：+${stats.purchasedDays} 天"
+                    >
+                      +${stats.purchasedDays}d
+                    </div>
+                  ` : ''}
+
+                  ${stats.totalDays === 0 ? `
+                    <span class="text-[9px] font-bold text-rose-500 pl-1 select-none flex items-center gap-1">
+                      <span class="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block animate-pulse"></span>已斷貨
+                    </span>
+                  ` : ''}
+                </div>
+              </div>
+
+              <div class="w-20 shrink-0 text-right pr-0.5">
+                <span class="text-xs font-bold text-slate-800">
+                  ${stats.totalDays}天
+                </span>
+                <span class="text-[10px] text-slate-400 block -mt-0.5">
+                  ${stats.currentPills}${stats.purchasedPills > 0 ? `<b class="text-indigo-600 font-normal">+${stats.purchasedPills}</b>` : ''}顆
+                </span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderCheckinView() {
+      const container = document.getElementById('time-slots-container');
+      const todayBadge = document.getElementById('today-date-badge');
+      if (!container) return;
+
+      const today = getTodayKey();
+      const d = new Date();
+      const weekDays = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+      if (todayBadge) {
+        todayBadge.textContent = `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} (${weekDays[d.getDay()]})`;
+      }
+
+      const todayChecks = checkinRecords[today] || {};
+      const slotsConfig = [
+        { id: 'morning', title: '晨間 / 空腹時段', icon: 'fa-sun', color: 'amber', subtitle: '醒腦提神 · 運動前補充' },
+        { id: 'lunch', title: '午間隨餐時段', icon: 'fa-utensils', color: 'blue', subtitle: '脂溶性成分隨油脂吸收佳' },
+        { id: 'dinner', title: '晚間隨餐時段', icon: 'fa-cloud-sun', color: 'orange', subtitle: '正餐飯後服用 · 溫和持久' },
+        { id: 'bedtime', title: '睡前 / 放鬆時段', icon: 'fa-moon', color: 'indigo', subtitle: '舒緩日常壓力 · 幫助睡眠' }
+      ];
+
+      container.innerHTML = slotsConfig.map(slot => {
+        const slotItems = items.filter(it => (it.slot || 'lunch') === slot.id);
+        const totalInSlot = slotItems.length;
+        const checkedInSlot = slotItems.filter(it => !!todayChecks[it.id]).length;
+        const allCompleted = totalInSlot > 0 && checkedInSlot === totalInSlot;
+
+        return `
+          <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
+                <div class="flex items-center gap-2">
+                  <div class="w-8 h-8 rounded-lg bg-${slot.color}-100 text-${slot.color}-600 flex items-center justify-center text-sm">
+                    <i class="fa-solid ${slot.icon}"></i>
+                  </div>
+                  <div>
+                    <h3 class="font-bold text-xs text-slate-800">${slot.title}</h3>
+                    <p class="text-[10px] text-slate-400">${slot.subtitle}</p>
+                  </div>
+                </div>
+                <span class="text-[10px] font-bold ${allCompleted ? 'text-emerald-600 bg-emerald-50' : 'text-slate-500 bg-slate-100'} px-2 py-0.5 rounded-full">
+                  ${checkedInSlot} / ${totalInSlot}
+                </span>
+              </div>
+
+              <div class="space-y-2">
+                ${slotItems.map(it => {
+                  const isChecked = !!todayChecks[it.id];
+                  const stats = calculateStats(it);
+                  return `
+                    <div class="p-2 rounded-xl border ${isChecked ? 'bg-emerald-50/50 border-emerald-200' : 'bg-slate-50 border-slate-200/80'} flex items-center justify-between gap-2 transition">
+                      <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-1.5">
+                          <h4 class="font-bold text-xs text-slate-800 truncate" title="${it.name}">${it.name}</h4>
+                          ${stats.currentDays <= 0 ? '<span class="text-[9px] bg-rose-100 text-rose-700 px-1 rounded">斷貨</span>' : ''}
+                        </div>
+                        <div class="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+                          <span class="font-semibold text-slate-600">吃 ${it.daily} 顆</span>
+                          <span>·</span>
+                          <span class="truncate" title="${it.notes || ''}">${it.notes || '隨水服用'}</span>
+                        </div>
+                      </div>
+
+                      <button 
+                        onclick="toggleCheckin(${it.id})"
+                        class="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition active:scale-95 ${isChecked ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white border border-slate-200 text-slate-400 hover:border-emerald-500 hover:text-emerald-600'}"
+                        title="${isChecked ? '已完成，點擊取消' : '點擊打卡'}"
+                      >
+                        <i class="fa-solid ${isChecked ? 'fa-check' : 'fa-plus'} text-xs"></i>
+                      </button>
+                    </div>
+                  `;
+                }).join('')}
+                ${slotItems.length === 0 ? '<div class="text-[11px] text-slate-400 text-center py-6">此時段尚無品項</div>' : ''}
+              </div>
+            </div>
+
+            ${slotItems.length > 0 ? `
+              <div class="mt-4 pt-3 border-t border-slate-100">
+                <button 
+                  onclick="checkinSlot('${slot.id}')"
+                  class="w-full py-1.5 rounded-xl font-bold text-xs transition active:scale-95 ${allCompleted ? 'bg-slate-100 text-slate-500 hover:bg-slate-200' : 'bg-slate-900 text-white hover:bg-black shadow-xs'}"
+                >
+                  ${allCompleted ? '已全數完成' : '此時段一鍵全打卡'}
+                </button>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+
+      updateTodayProgress();
+    }
+
+    function toggleCheckin(itemId) {
+      const today = getTodayKey();
+      if (!checkinRecords[today]) checkinRecords[today] = {};
+
+      const item = items.find(it => it.id === itemId);
+      if (!item) return;
+
+      const isChecked = !!checkinRecords[today][itemId];
+      const daily = Number(item.daily) || 1;
+      let totalPills = (item.bottles * item.capacity) + item.loose;
+
+      if (!isChecked) {
+        if (totalPills > 0) {
+          totalPills = Math.max(0, totalPills - daily);
+          item.bottles = Math.floor(totalPills / item.capacity);
+          item.loose = totalPills % item.capacity;
+        }
+        checkinRecords[today][itemId] = { time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }), daily };
+        showToast(`已完成「${item.name}」打卡（扣除 ${daily} 顆）`);
+      } else {
+        totalPills += daily;
+        item.bottles = Math.floor(totalPills / item.capacity);
+        item.loose = totalPills % item.capacity;
+        delete checkinRecords[today][itemId];
+        showToast(`已取消「${item.name}」今日打卡（加回 ${daily} 顆）`);
+      }
+
+      triggerCloudSync();
+      renderAll();
+    }
+
+    function checkinSlot(slotId) {
+      const today = getTodayKey();
+      if (!checkinRecords[today]) checkinRecords[today] = {};
+
+      const slotItems = items.filter(it => (it.slot || 'lunch') === slotId);
+      let count = 0;
+
+      slotItems.forEach(it => {
+        if (!checkinRecords[today][it.id]) {
+          const daily = Number(it.daily) || 1;
+          let total = (it.bottles * it.capacity) + it.loose;
+          if (total > 0) {
+            total = Math.max(0, total - daily);
+            it.bottles = Math.floor(total / it.capacity);
+            it.loose = total % it.capacity;
+          }
+          checkinRecords[today][it.id] = { time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }), daily };
+          count++;
+        }
+      });
+
+      triggerCloudSync();
+      renderAll();
+      showToast(`已為該時段完成 ${count} 款打卡！`);
+    }
+
+    function consumeAllToday() {
+      const today = getTodayKey();
+      if (!checkinRecords[today]) checkinRecords[today] = {};
+
+      let count = 0;
+      items.forEach(it => {
+        if (!checkinRecords[today][it.id]) {
+          const daily = Number(it.daily) || 1;
+          let total = (it.bottles * it.capacity) + it.loose;
+          if (total > 0) {
+            total = Math.max(0, total - daily);
+            it.bottles = Math.floor(total / it.capacity);
+            it.loose = total % it.capacity;
+          }
+          checkinRecords[today][it.id] = { time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }), daily };
+          count++;
+        }
+      });
+
+      triggerCloudSync();
+      renderAll();
+      showToast(`一鍵全打卡完成！已為 ${count} 款未服用品項扣除今日份量`);
+    }
+
+    function updateTodayProgress() {
+      const today = getTodayKey();
+      const todayChecks = checkinRecords[today] || {};
+      const total = items.length;
+      const checked = items.filter(it => !!todayChecks[it.id]).length;
+      const pct = total > 0 ? Math.round((checked / total) * 100) : 0;
+
+      const rateText = document.getElementById('today-rate-text');
+      const rateBar = document.getElementById('today-rate-bar');
+      const statProg = document.getElementById('stat-today-progress');
+      const navBadge = document.getElementById('nav-checkin-badge');
+
+      if (rateText) rateText.textContent = `${pct}% (${checked}/${total})`;
+      if (rateBar) rateBar.style.width = `${pct}%`;
+      if (statProg) statProg.textContent = `${checked} / ${total} 款 (${pct}%)`;
+
+      if (navBadge) {
+        navBadge.textContent = `${checked}/${total}`;
+        navBadge.classList.remove('hidden');
+      }
+    }
+
+    function renderReminderView() {
+      document.getElementById('reminder-time-morning').value = reminderTimes.morning;
+      document.getElementById('reminder-time-lunch').value = reminderTimes.lunch;
+      document.getElementById('reminder-time-dinner').value = reminderTimes.dinner;
+      document.getElementById('reminder-time-bedtime').value = reminderTimes.bedtime;
+
+      const tbody = document.getElementById('timing-guide-tbody');
+      if (!tbody) return;
+
+      const slotNameMap = {
+        morning: '<span class="text-amber-700 font-bold">晨間 / 空腹</span>',
+        lunch: '<span class="text-blue-700 font-bold">午間隨餐</span>',
+        dinner: '<span class="text-orange-700 font-bold">晚間隨餐</span>',
+        bedtime: '<span class="text-indigo-700 font-bold">睡前放鬆</span>'
+      };
+
+      tbody.innerHTML = items.map(it => `
+        <tr class="hover:bg-slate-50 transition">
+          <td class="py-2.5 px-3 font-semibold text-slate-800">${it.name}</td>
+          <td class="py-2.5 px-3">${slotNameMap[it.slot || 'lunch']}</td>
+          <td class="py-2.5 px-3 font-medium text-slate-600">每日 ${it.daily} 顆</td>
+          <td class="py-2.5 px-3 text-slate-500 text-[10px]">${it.notes || '隨開水吞服'}</td>
+        </tr>
+      `).join('');
+
+      updateNotifyButtonStatus();
+    }
+
+    function saveReminderTimes() {
+      reminderTimes.morning = document.getElementById('reminder-time-morning').value;
+      reminderTimes.lunch = document.getElementById('reminder-time-lunch').value;
+      reminderTimes.dinner = document.getElementById('reminder-time-dinner').value;
+      reminderTimes.bedtime = document.getElementById('reminder-time-bedtime').value;
+      localStorage.setItem(STORAGE_KEY_REMINDERS, JSON.stringify(reminderTimes));
+      triggerCloudSync();
+      showToast('提醒時間已儲存！');
+    }
+
+    function updateNotifyButtonStatus() {
+      const btn = document.getElementById('notify-status-text');
+      if (!btn) return;
+      if (typeof Notification === 'undefined') {
+        btn.textContent = '此瀏覽器不支援推播';
+      } else if (Notification.permission === 'granted') {
+        btn.textContent = '推播提醒已開啟 ✓';
+        btn.parentElement.classList.add('bg-emerald-50', 'text-emerald-700', 'border-emerald-300');
+      } else if (Notification.permission === 'denied') {
+        btn.textContent = '系統推播已被封鎖';
+      } else {
+        btn.textContent = '啟用系統推播通知';
+      }
+    }
+
+    function requestNotificationPermission() {
+      if (typeof Notification === 'undefined') {
+        showToast('目前環境不支援推播通知，系統會以網頁音效提示。');
+        return;
+      }
+      Notification.requestPermission().then(permission => {
+        updateNotifyButtonStatus();
+        if (permission === 'granted') {
+          showToast('已成功開啟系統推播通知！');
+          new Notification('保健品定時提醒已啟用', {
+            body: '系統將在您設定的時段提醒您服用保健品！'
+          });
+        }
+      });
+    }
+
+    function testNotificationSound() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.5);
+      } catch (e) {}
+      showToast('🔔 提醒測試音效已播放！');
+    }
+
+    setInterval(() => {
+      const now = new Date();
+      const currentHM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      if (now.getSeconds() === 0) {
+        Object.entries(reminderTimes).forEach(([slot, timeStr]) => {
+          if (timeStr === currentHM) {
+            triggerSlotReminder(slot);
+          }
+        });
+      }
+    }, 1000);
+
+    function triggerSlotReminder(slot) {
+      testNotificationSound();
+      const slotNames = { morning: '晨間/空腹', lunch: '午間隨餐', dinner: '晚間隨餐', bedtime: '睡前放鬆' };
+      const title = `⏰ 保健品服用提醒：${slotNames[slot] || slot}時間到了！`;
+      showToast(title);
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        new Notification(title, {
+          body: '請記得打開工作台查看該時段的保健品並進行打卡！'
+        });
+      }
+    }
+
+    function renderHistoryView() {
+      render7DaysHistory();
+      renderTodayConsumedList();
+      renderMiniCalendar();
+    }
+
+    function render7DaysHistory() {
+      const container = document.getElementById('recent-7days-container');
+      if (!container) return;
+
+      const today = new Date();
+      let html = '';
+
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(today.getDate() - i);
+        const yr = d.getFullYear();
+        const mo = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const key = `${yr}-${mo}-${day}`;
+
+        const checks = checkinRecords[key] || {};
+        const count = Object.keys(checks).length;
+        const total = items.length;
+        const isFull = total > 0 && count >= total;
+        const hasSome = count > 0;
+        const isToday = i === 0;
+
+        html += `
+          <div class="p-2.5 rounded-xl border ${isToday ? 'border-indigo-300 bg-indigo-50/50' : 'border-slate-100 bg-slate-50'} flex flex-col items-center">
+            <span class="text-[10px] text-slate-400 mb-1">${mo}/${day}</span>
+            <div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${isFull ? 'bg-emerald-500 text-white' : (hasSome ? 'bg-amber-400 text-white' : 'bg-slate-200 text-slate-400')}">
+              ${count}
+            </div>
+            <span class="text-[9px] text-slate-500 mt-1">${isToday ? '今天' : `${count}/${total}`}</span>
+          </div>
+        `;
+      }
+
+      container.innerHTML = html;
+    }
+
+    function renderTodayConsumedList() {
+      const container = document.getElementById('today-consumed-list');
+      if (!container) return;
+
+      const today = getTodayKey();
+      const checks = checkinRecords[today] || {};
+      const checkedIds = Object.keys(checks);
+
+      if (checkedIds.length === 0) {
+        container.innerHTML = '<div class="text-xs text-slate-400 text-center py-4 bg-slate-50 rounded-xl">今日尚未有任何品項打卡</div>';
+        return;
+      }
+
+      container.innerHTML = checkedIds.map(id => {
+        const item = items.find(it => String(it.id) === String(id));
+        if (!item) return '';
+        const info = checks[id];
+        return `
+          <div class="flex items-center justify-between py-1.5 px-2 bg-slate-50 rounded-lg text-xs">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span class="font-semibold text-slate-800">${item.name}</span>
+            </div>
+            <div class="text-[11px] text-slate-400">
+              已服 <span class="font-bold text-slate-700">${item.daily} 顆</span> 
+              ${info?.time ? `(${info.time})` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderMiniCalendar() {
+      const container = document.getElementById('mini-calendar');
+      const titleEl = document.getElementById('calendar-month-title');
+      if (!container) return;
+
+      const now = new Date();
+      const curYear = now.getFullYear();
+      const curMonth = now.getMonth();
+      if (titleEl) titleEl.textContent = `${curYear}年 ${curMonth + 1}月`;
+
+      const firstDay = new Date(curYear, curMonth, 1).getDay();
+      const daysInMonth = new Date(curYear, curMonth + 1, 0).getDate();
+
+      const weekHeaders = ['日', '一', '二', '三', '四', '五', '六'];
+      let html = weekHeaders.map(w => `<div class="text-[10px] font-bold text-slate-400 py-1">${w}</div>`).join('');
+
+      for (let i = 0; i < firstDay; i++) {
+        html += `<div></div>`;
+      }
+
+      let totalDaysCheckin = 0;
+      let totalPills = 0;
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const moStr = String(curMonth + 1).padStart(2, '0');
+        const dayStr = String(day).padStart(2, '0');
+        const key = `${curYear}-${moStr}-${dayStr}`;
+        const checks = checkinRecords[key] || {};
+        const count = Object.keys(checks).length;
+
+        if (count > 0) totalDaysCheckin++;
+        Object.values(checks).forEach(c => { totalPills += (c.daily || 1); });
+
+        const isToday = day === now.getDate();
+        let bgClass = 'text-slate-600 hover:bg-slate-100';
+
+        if (count >= items.length && items.length > 0) {
+          bgClass = 'bg-emerald-500 text-white font-bold';
+        } else if (count > 0) {
+          bgClass = 'bg-amber-100 text-amber-900 font-bold';
+        }
+
+        html += `
+          <div class="h-7 w-7 mx-auto rounded-lg flex items-center justify-center ${bgClass} ${isToday ? 'ring-2 ring-indigo-500' : ''}" title="${key}: 已服 ${count} 款">
+            ${day}
+          </div>
+        `;
+      }
+
+      container.innerHTML = html;
+
+      const totalDaysEl = document.getElementById('stat-total-checkin-days');
+      const totalPillsEl = document.getElementById('stat-total-pills-taken');
+      if (totalDaysEl) totalDaysEl.textContent = `${totalDaysCheckin} 天`;
+      if (totalPillsEl) totalPillsEl.textContent = `${totalPills} 顆`;
+    }
+
+    function changePurchased(index, delta) {
+      items[index].purchased = Math.max(0, (items[index].purchased || 0) + delta);
+      triggerCloudSync();
+      renderAll();
+    }
+
+    function setPurchased(index, val) {
+      items[index].purchased = Math.max(0, parseInt(val) || 0);
+      triggerCloudSync();
+      renderAll();
+    }
+
+    function receivePurchased(index) {
+      const it = items[index];
+      const count = it.purchased || 0;
+      if (count <= 0) return;
+      it.bottles = (it.bottles || 0) + count;
+      it.purchased = 0;
+      triggerCloudSync();
+      renderAll();
+      showToast(`已將「${it.name}」${count} 罐採購轉入現貨！`);
+    }
+
+    function changeBottles(index, delta) {
+      items[index].bottles = Math.max(0, (items[index].bottles || 0) + delta);
+      triggerCloudSync();
+      renderAll();
+    }
+
+    function setBottles(index, val) {
+      items[index].bottles = Math.max(0, parseInt(val) || 0);
+      triggerCloudSync();
+      renderAll();
+    }
+
+    function changeLoose(index, delta) {
+      items[index].loose = Math.max(0, (items[index].loose || 0) + delta);
+      triggerCloudSync();
+      renderAll();
+    }
+
+    function setLoose(index, val) {
+      items[index].loose = Math.max(0, parseInt(val) || 0);
+      triggerCloudSync();
+      renderAll();
+    }
+
+    function toggleAddModal() {
+      const modal = document.getElementById('add-modal');
+      modal.classList.toggle('hidden');
+    }
+
+    function handleAddItem(e) {
+      e.preventDefault();
+      const name = document.getElementById('form-name').value.trim();
+      const capacity = parseInt(document.getElementById('form-capacity').value) || 60;
+      const bottles = parseInt(document.getElementById('form-bottles').value) || 0;
+      const loose = parseInt(document.getElementById('form-loose').value) || 0;
+      const daily = parseFloat(document.getElementById('form-daily').value) || 1;
+      const slot = document.getElementById('form-slot').value || 'lunch';
+      const notes = document.getElementById('form-notes').value.trim();
+
+      if (!name) return;
+
+      items.unshift({
+        id: Date.now(),
+        name,
+        capacity,
+        bottles,
+        loose,
+        purchased: 0,
+        daily,
+        slot,
+        notes,
+        url: ''
+      });
+
+      triggerCloudSync();
+      renderAll();
+      e.target.reset();
+      toggleAddModal();
+      showToast(`成功新增「${name}」！`);
+    }
+
+    function deleteItem(index) {
+      const name = items[index]?.name;
+      items.splice(index, 1);
+      triggerCloudSync();
+      renderAll();
+      showToast(`已移除「${name}」`);
+    }
+
+    function resetData() {
+      items = JSON.parse(JSON.stringify(DEFAULT_DATA));
+      triggerCloudSync();
+      renderAll();
+      showToast('已重設為最新預設庫存');
+    }
+
+    let toastTimer;
+    function showToast(msg, isError = false) {
+      const toast = document.getElementById('toast');
+      const text = document.getElementById('toast-text');
+      if (!toast || !text) return;
+
+      text.textContent = msg;
+      toast.className = `fixed bottom-6 right-6 z-50 pointer-events-none flex items-center gap-2 ${isError ? 'bg-rose-600' : 'bg-slate-900'} text-white px-4 py-2.5 rounded-xl shadow-xl text-xs font-semibold transform translate-y-0 opacity-100 transition-all duration-300`;
+
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.className = "fixed bottom-6 right-6 z-50 pointer-events-none flex items-center gap-2 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl text-xs font-semibold transform translate-y-16 opacity-0 transition-all duration-300";
+      }, 2500);
+    }
+
+    function renderAll() {
+      let dangerCount = 0;
+      let warningCount = 0;
+      let safeCount = 0;
+      let totalPurchasedBottles = 0;
+
+      items.forEach(it => {
+        const { status } = calculateStats(it);
+        if (status === 'danger' || status === 'empty') dangerCount++;
+        else if (status === 'warning') warningCount++;
+        else safeCount++;
+        totalPurchasedBottles += (it.purchased || 0);
+      });
+
+      document.getElementById('stat-total-count').textContent = `${items.length} 款`;
+      document.getElementById('stat-danger-count').textContent = `${dangerCount} 款`;
+      document.getElementById('stat-warning-count').textContent = `${warningCount} 款`;
+      document.getElementById('stat-purchased-bottles').textContent = `${totalPurchasedBottles} 罐`;
+
+      updateTodayProgress();
+      renderCards();
+      renderGantt();
+      renderCheckinView();
+      renderReminderView();
+      renderHistoryView();
+    }
+
+    window.addEventListener('DOMContentLoaded', renderAll);
+  </script>
+</body>
+</html>
